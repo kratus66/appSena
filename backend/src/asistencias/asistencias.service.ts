@@ -6,7 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { ClaseSesion } from './entities/clase-sesion.entity';
 import { Asistencia } from './entities/asistencia.entity';
 import { Ficha } from '../fichas/entities/ficha.entity';
@@ -147,7 +147,7 @@ export class AsistenciasService {
   async findOneSesion(id: string, userId: string, userRole: UserRole): Promise<ClaseSesion> {
     const sesion = await this.sesionRepository.findOne({
       where: { id },
-      relations: ['ficha', 'ficha.programa', 'ficha.colegio', 'ficha.instructor'],
+      relations: ['ficha', 'ficha.programa', 'ficha.colegio', 'ficha.instructor', 'asistencias', 'asistencias.aprendiz'],
     });
 
     if (!sesion) {
@@ -160,15 +160,13 @@ export class AsistenciasService {
     }
 
     // Obtener resumen de asistencias
-    const totalAprendices = await this.asistenciaRepository.count({
-      where: { sesionId: id },
-    });
+    const totalAprendices = sesion.asistencias?.length || 0;
 
-    const presentes = await this.asistenciaRepository.count({
-      where: { sesionId: id, presente: true },
-    });
+    const presentes = sesion.asistencias?.filter(a => a.presente).length || 0;
 
     const ausentes = totalAprendices - presentes;
+    
+    const justificadas = sesion.asistencias?.filter(a => !a.presente && a.justificada).length || 0;
 
     return {
       ...sesion,
@@ -176,6 +174,7 @@ export class AsistenciasService {
         totalAprendices,
         presentes,
         ausentes,
+        justificadas,
       },
     } as any;
   }
@@ -208,7 +207,7 @@ export class AsistenciasService {
     // Verificar que todos los aprendices pertenecen a la ficha de la sesión
     const aprendizIds = asistencias.map((a) => a.aprendizId);
     const aprendices = await this.aprendizRepository.find({
-      where: { id: aprendizIds as any },
+      where: { id: In(aprendizIds) },
     });
 
     const aprendicesInvalidos = aprendices.filter((a) => a.fichaId !== sesion.fichaId);
@@ -453,11 +452,15 @@ export class AsistenciasService {
       .where('sesion.fichaId = :fichaId', { fichaId });
 
     if (desde) {
-      sesionesQuery.andWhere('sesion.fecha >= :desde', { desde: new Date(desde) });
+      const desdeDate = new Date(desde);
+      desdeDate.setHours(0, 0, 0, 0);
+      sesionesQuery.andWhere('DATE(sesion.fecha) >= DATE(:desde)', { desde: desdeDate });
     }
 
     if (hasta) {
-      sesionesQuery.andWhere('sesion.fecha <= :hasta', { hasta: new Date(hasta) });
+      const hastaDate = new Date(hasta);
+      hastaDate.setHours(23, 59, 59, 999);
+      sesionesQuery.andWhere('DATE(sesion.fecha) <= DATE(:hasta)', { hasta: hastaDate });
     }
 
     const totalSesiones = await sesionesQuery.getCount();
@@ -474,11 +477,15 @@ export class AsistenciasService {
       .where('sesion.fichaId = :fichaId', { fichaId });
 
     if (desde) {
-      asistenciasQuery.andWhere('sesion.fecha >= :desde', { desde: new Date(desde) });
+      const desdeDate = new Date(desde);
+      desdeDate.setHours(0, 0, 0, 0);
+      asistenciasQuery.andWhere('DATE(sesion.fecha) >= DATE(:desde)', { desde: desdeDate });
     }
 
     if (hasta) {
-      asistenciasQuery.andWhere('sesion.fecha <= :hasta', { hasta: new Date(hasta) });
+      const hastaDate = new Date(hasta);
+      hastaDate.setHours(23, 59, 59, 999);
+      asistenciasQuery.andWhere('DATE(sesion.fecha) <= DATE(:hasta)', { hasta: hastaDate });
     }
 
     const totalAsistencias = await asistenciasQuery.getCount();
@@ -506,7 +513,7 @@ export class AsistenciasService {
       .addGroupBy('aprendiz.nombres')
       .addGroupBy('aprendiz.apellidos')
       .addGroupBy('aprendiz.documento')
-      .orderBy('totalAusencias', 'DESC')
+      .orderBy('"totalAusencias"', 'DESC')
       .limit(10)
       .getRawMany();
 

@@ -16,6 +16,7 @@ import {
   X,
   BarChart3,
   ClipboardCheck,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +31,7 @@ const menuItems = {
     { icon: GraduationCap, label: 'Aprendices', href: '/dashboard/aprendices' },
     { icon: FileText, label: 'Fichas', href: '/dashboard/fichas' },
     { icon: ClipboardCheck, label: 'Asistencias', href: '/dashboard/asistencias' },
+    { icon: Shield, label: 'Disciplinario', href: '/dashboard/disciplinario' },
     { icon: School, label: 'Colegios', href: '/dashboard/colegios' },
     { icon: BookOpen, label: 'Programas', href: '/dashboard/programas' },
     { icon: BarChart3, label: 'Estadísticas', href: '/dashboard/stats' },
@@ -38,6 +40,7 @@ const menuItems = {
     { icon: Home, label: 'Dashboard', href: '/dashboard' },
     { icon: FileText, label: 'Mis Fichas', href: '/dashboard/fichas' },
     { icon: ClipboardCheck, label: 'Asistencias', href: '/dashboard/asistencias' },
+    { icon: Shield, label: 'Disciplinario', href: '/dashboard/disciplinario' },
     { icon: GraduationCap, label: 'Mis Aprendices', href: '/dashboard/aprendices' },
   ],
   coordinador: [
@@ -45,6 +48,7 @@ const menuItems = {
     { icon: GraduationCap, label: 'Aprendices', href: '/dashboard/aprendices' },
     { icon: FileText, label: 'Fichas', href: '/dashboard/fichas' },
     { icon: ClipboardCheck, label: 'Asistencias', href: '/dashboard/asistencias' },
+    { icon: Shield, label: 'Disciplinario', href: '/dashboard/disciplinario' },
     { icon: School, label: 'Colegios', href: '/dashboard/colegios' },
     { icon: BookOpen, label: 'Programas', href: '/dashboard/programas' },
     { icon: BarChart3, label: 'Reportes', href: '/dashboard/stats' },

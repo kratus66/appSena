@@ -12,6 +12,9 @@ import { FichasModule } from './fichas/fichas.module';
 import { AprendicesModule } from './aprendices/aprendices.module';
 import { AcudientesModule } from './acudientes/acudientes.module';
 import { AsistenciasModule } from './asistencias/asistencias.module';
+import { DisciplinarioModule } from './disciplinario/disciplinario.module';
+import { UploadModule } from './upload/upload.module';
+import { PtcModule } from './ptc/ptc.module';
 import { User } from './users/entities/user.entity';
 import { Colegio } from './colegios/entities/colegio.entity';
 import { Programa } from './programas/entities/programa.entity';
@@ -20,6 +23,12 @@ import { Aprendiz } from './aprendices/entities/aprendiz.entity';
 import { Acudiente } from './acudientes/entities/acudiente.entity';
 import { ClaseSesion } from './asistencias/entities/clase-sesion.entity';
 import { Asistencia } from './asistencias/entities/asistencia.entity';
+import { DisciplinaryCase } from './disciplinario/entities/disciplinary-case.entity';
+import { CaseAction } from './disciplinario/entities/case-action.entity';
+import { Ptc } from './ptc/entities/ptc.entity';
+import { PtcItem } from './ptc/entities/ptc-item.entity';
+import { Acta } from './ptc/entities/acta.entity';
+import { ActaAsistente } from './ptc/entities/acta-asistente.entity';
 
 @Module({
   imports: [
@@ -36,7 +45,7 @@ import { Asistencia } from './asistencias/entities/asistencia.entity';
         username: configService.get('DB_USERNAME'),
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_DATABASE'),
-        entities: [User, Colegio, Programa, Ficha, Aprendiz, Acudiente, ClaseSesion, Asistencia],
+        entities: [User, Colegio, Programa, Ficha, Aprendiz, Acudiente, ClaseSesion, Asistencia, DisciplinaryCase, CaseAction, Ptc, PtcItem, Acta, ActaAsistente],
         synchronize: configService.get('NODE_ENV') === 'development',
         logging: configService.get('NODE_ENV') === 'development',
       }),
@@ -50,6 +59,9 @@ import { Asistencia } from './asistencias/entities/asistencia.entity';
     AprendicesModule,
     AcudientesModule,
     AsistenciasModule,
+    DisciplinarioModule,
+    PtcModule,
+    UploadModule,
     SeederModule,
   ],
   controllers: [AppController],

@@ -3,8 +3,13 @@ import { ColegiosService } from '../colegios/colegios.service';
 import { ProgramasService } from '../programas/programas.service';
 import { UsersService } from '../users/users.service';
 import { FichasService } from '../fichas/fichas.service';
+import { AprendicesService } from '../aprendices/aprendices.service';
+import { DisciplinarioService } from '../disciplinario/disciplinario.service';
 import { UserRole } from '../users/entities/user.entity';
 import { JornadaFicha, EstadoFicha } from '../fichas/entities/ficha.entity';
+import { TipoDocumento, EstadoAcademico } from '../aprendices/entities/aprendiz.entity';
+import { CaseTipo, CaseGravedad, CaseEstado } from '../disciplinario/entities/disciplinary-case.entity';
+import { ActionTipo } from '../disciplinario/entities/case-action.entity';
 
 @Injectable()
 export class SeederService {
@@ -15,6 +20,8 @@ export class SeederService {
     private readonly programasService: ProgramasService,
     private readonly usersService: UsersService,
     private readonly fichasService: FichasService,
+    private readonly aprendicesService: AprendicesService,
+    private readonly disciplinarioService: DisciplinarioService,
   ) {}
 
   async seed() {
@@ -24,6 +31,8 @@ export class SeederService {
     await this.seedColegios();
     await this.seedProgramas();
     await this.seedFichas();
+    await this.seedAprendices();
+    await this.seedDisciplinario();
 
     this.logger.log('Seeders completados exitosamente');
   }
@@ -337,6 +346,317 @@ export class SeederService {
       } catch (error) {
         this.logger.warn(`Ficha ya existe o error: ${ficha.numeroFicha} - ${error.message}`);
       }
+    }
+  }
+
+  private async seedAprendices() {
+    this.logger.log('Seeding Aprendices...');
+
+    const usuarios = await this.usersService.findAll();
+    const fichas = await this.fichasService.findAll({});
+
+    if (fichas.data.length === 0) {
+      this.logger.warn('No hay fichas disponibles para crear aprendices');
+      return;
+    }
+
+    const adminUser = usuarios.find(u => u.rol === UserRole.ADMIN);
+    if (!adminUser) {
+      this.logger.warn('No se encontró usuario administrador');
+      return;
+    }
+
+    // Datos base de aprendices para generar variaciones
+    const nombresBase = [
+      'Carlos Andrés', 'Laura Melissa', 'Juan Pablo', 'Andrea Valentina',
+      'Miguel Ángel', 'Sofía Carolina', 'David Santiago', 'Camila Alejandra',
+      'Sebastián', 'Valentina', 'Andrés Felipe', 'María José',
+      'Daniel Eduardo', 'Isabella', 'Nicolás', 'Gabriela',
+      'Santiago', 'Daniela', 'Mateo', 'Natalia'
+    ];
+
+    const apellidosBase = [
+      'Rodríguez Pérez', 'García Martínez', 'Hernández López', 'Díaz Ramírez',
+      'Torres Sánchez', 'Vargas Castro', 'Rojas Morales', 'Muñoz Silva',
+      'Gómez Ruiz', 'Jiménez Ortiz', 'Moreno Ríos', 'Álvarez Cruz',
+      'Ramírez Vega', 'Castro Molina', 'Méndez Herrera', 'Reyes Parra',
+      'Gutiérrez Ramos', 'Sánchez Peña', 'López Medina', 'Martínez Gómez'
+    ];
+
+    const direcciones = [
+      'Calle 10 #5-20', 'Carrera 15 #30-45', 'Avenida 68 #25-10',
+      'Calle 20 #7-15', 'Carrera 8 #14-22', 'Calle 45 #12-30',
+      'Carrera 23 #40-11', 'Avenida 19 #50-22', 'Calle 72 #8-35',
+      'Carrera 30 #15-20'
+    ];
+
+    let docCounter = 1001234567;
+    let aprendizIndex = 0;
+
+    // Crear 3-5 aprendices por ficha
+    for (const ficha of fichas.data) {
+      // Número de aprendices por ficha (entre 3 y 5)
+      const numAprendices = Math.floor(Math.random() * 3) + 3;
+
+      this.logger.log(`Creando ${numAprendices} aprendices para ficha ${ficha.numeroFicha}...`);
+
+      for (let i = 0; i < numAprendices; i++) {
+        const nombres = nombresBase[aprendizIndex % nombresBase.length];
+        const apellidos = apellidosBase[aprendizIndex % apellidosBase.length];
+        const documento = docCounter.toString();
+        const email = `aprendiz${docCounter}@sena.edu.co`;
+        const telefono = `310${docCounter.toString().slice(-7)}`;
+        const direccion = direcciones[aprendizIndex % direcciones.length];
+        
+        // Distribuir estados académicos (mayoría activos)
+        let estadoAcademico = EstadoAcademico.ACTIVO;
+        if (i === numAprendices - 1 && Math.random() > 0.7) {
+          estadoAcademico = EstadoAcademico.RETIRADO;
+        } else if (i === 0 && Math.random() > 0.8) {
+          estadoAcademico = EstadoAcademico.SUSPENDIDO;
+        }
+
+        const tipoDocumento = docCounter % 10 === 0 ? TipoDocumento.TI : TipoDocumento.CC;
+
+        try {
+          // Crear usuario para el aprendiz
+          const userAprendiz = await this.usersService.create({
+            email: email,
+            password: 'Aprendiz123!',
+            nombre: `${nombres} ${apellidos}`,
+            documento: documento,
+            rol: UserRole.APRENDIZ,
+          });
+
+          // Crear el aprendiz con el userId
+          const aprendiz = await this.aprendicesService.create({
+            nombres,
+            apellidos,
+            tipoDocumento,
+            documento,
+            email,
+            telefono,
+            direccion,
+            estadoAcademico,
+            fichaId: ficha.id,
+            userId: userAprendiz.id,
+          }, adminUser);
+          
+          this.logger.log(`Aprendiz creado: ${aprendiz.nombres} ${aprendiz.apellidos} - Ficha: ${ficha.numeroFicha}`);
+        } catch (error) {
+          this.logger.warn(`Error creando aprendiz: ${documento} - ${error.message}`);
+        }
+
+        docCounter++;
+        aprendizIndex++;
+      }
+    }
+
+    this.logger.log(`Total de aprendices procesados: ${aprendizIndex}`);
+  }
+
+  private async seedDisciplinario() {
+    this.logger.log('Seeding Casos Disciplinarios...');
+
+    const usuarios = await this.usersService.findAll();
+    const fichas = await this.fichasService.findAll({});
+    const instructor = usuarios.find((u) => u.rol === UserRole.INSTRUCTOR);
+    const coordinador = usuarios.find((u) => u.rol === UserRole.COORDINADOR);
+    const adminUser = usuarios.find(u => u.rol === UserRole.ADMIN);
+
+    if (!instructor || !adminUser || fichas.data.length === 0) {
+      this.logger.warn('No hay instructor o fichas para crear casos disciplinarios');
+      return;
+    }
+
+    // Obtener aprendices
+    let aprendices = [];
+    try {
+      const result = await this.aprendicesService.findAll({}, adminUser);
+      aprendices = result.data;
+    } catch (error) {
+      this.logger.warn('No hay aprendices disponibles');
+      return;
+    }
+
+    if (aprendices.length < 3) {
+      this.logger.warn('No hay suficientes aprendices para crear casos');
+      return;
+    }
+
+    // Caso 1: Convivencia - Estado ABIERTO
+    try {
+      const caso1 = await this.disciplinarioService.create(
+        {
+          fichaId: aprendices[0].fichaId,
+          aprendizId: aprendices[0].id,
+          tipo: CaseTipo.CONVIVENCIA,
+          gravedad: CaseGravedad.MEDIA,
+          asunto: 'Comportamiento inadecuado en clase',
+          descripcion:
+            'El aprendiz mostró comportamiento disruptivo durante la sesión de formación, interrumpiendo constantemente al instructor y a sus compañeros.',
+          fechaIncidente: '2024-12-15',
+          evidenciaUrl: 'https://storage.example.com/evidencia-caso1.pdf',
+        },
+        instructor,
+      );
+      this.logger.log(`Caso disciplinario creado: ${caso1.asunto}`);
+
+      // Cambiar a ABIERTO
+      await this.disciplinarioService.updateEstado(
+        caso1.id,
+        { estado: CaseEstado.ABIERTO },
+        instructor,
+      );
+
+      // Agregar acciones
+      await this.disciplinarioService.createAction(
+        caso1.id,
+        {
+          tipo: ActionTipo.LLAMADO_ATENCION,
+          descripcion:
+            'Se realizó llamado de atención verbal al aprendiz, explicando la importancia del respeto en el aula.',
+        },
+        instructor,
+      );
+
+      await this.disciplinarioService.createAction(
+        caso1.id,
+        {
+          tipo: ActionTipo.COMPROMISO,
+          descripcion:
+            'El aprendiz se compromete a mejorar su comportamiento y participar activamente de manera respetuosa.',
+          fechaCompromiso: '2025-01-15',
+          responsable: `Aprendiz ${aprendices[0].nombres} ${aprendices[0].apellidos}`,
+          evidenciaUrl: 'https://storage.example.com/compromiso-firmado.pdf',
+        },
+        instructor,
+      );
+
+      this.logger.log('Acciones agregadas al caso 1');
+    } catch (error) {
+      this.logger.warn(`Error creando caso 1: ${error.message}`);
+    }
+
+    // Caso 2: Asistencia - Estado SEGUIMIENTO
+    try {
+      const caso2 = await this.disciplinarioService.create(
+        {
+          fichaId: aprendices[1].fichaId,
+          aprendizId: aprendices[1].id,
+          tipo: CaseTipo.ASISTENCIA,
+          gravedad: CaseGravedad.ALTA,
+          asunto: 'Alerta de asistencia: 5 o más faltas al mes',
+          descripcion:
+            'Se detectó que el aprendiz ha faltado 6 días en el mes de diciembre sin justificación adecuada.',
+          fechaIncidente: '2024-12-20',
+        },
+        instructor,
+      );
+      this.logger.log(`Caso disciplinario creado: ${caso2.asunto}`);
+
+      // Cambiar a ABIERTO y luego SEGUIMIENTO
+      await this.disciplinarioService.updateEstado(
+        caso2.id,
+        { estado: CaseEstado.ABIERTO },
+        instructor,
+      );
+
+      await this.disciplinarioService.createAction(
+        caso2.id,
+        {
+          tipo: ActionTipo.CITACION,
+          descripcion:
+            'Se citó al aprendiz y acudiente para explicar situación de inasistencias. El aprendiz manifestó problemas de transporte.',
+        },
+        instructor,
+      );
+
+      if (coordinador) {
+        await this.disciplinarioService.updateEstado(
+          caso2.id,
+          { estado: CaseEstado.SEGUIMIENTO },
+          coordinador,
+        );
+
+        await this.disciplinarioService.createAction(
+          caso2.id,
+          {
+            tipo: ActionTipo.COMPROMISO,
+            descripcion:
+              'Se estableció plan de recuperación de horas y compromiso de asistencia puntual. Se brindarán opciones de transporte.',
+            fechaCompromiso: '2025-02-01',
+            responsable: `Aprendiz ${aprendices[1].nombres} ${aprendices[1].apellidos}`,
+          },
+          coordinador,
+        );
+
+        this.logger.log('Caso 2 en estado SEGUIMIENTO con acciones');
+      }
+    } catch (error) {
+      this.logger.warn(`Error creando caso 2: ${error.message}`);
+    }
+
+    // Caso 3: Académico - Estado CERRADO
+    try {
+      const caso3 = await this.disciplinarioService.create(
+        {
+          fichaId: aprendices[2].fichaId,
+          aprendizId: aprendices[2].id,
+          tipo: CaseTipo.ACADEMICO,
+          gravedad: CaseGravedad.LEVE,
+          asunto: 'Bajo rendimiento académico en módulo de programación',
+          descripcion:
+            'El aprendiz presenta dificultades para cumplir con las actividades del módulo de programación orientada a objetos.',
+          fechaIncidente: '2024-11-10',
+        },
+        instructor,
+      );
+      this.logger.log(`Caso disciplinario creado: ${caso3.asunto}`);
+
+      await this.disciplinarioService.updateEstado(
+        caso3.id,
+        { estado: CaseEstado.ABIERTO },
+        instructor,
+      );
+
+      await this.disciplinarioService.createAction(
+        caso3.id,
+        {
+          tipo: ActionTipo.OBSERVACION,
+          descripcion:
+            'Se identificó que el aprendiz necesita refuerzo en conceptos básicos de programación.',
+        },
+        instructor,
+      );
+
+      await this.disciplinarioService.createAction(
+        caso3.id,
+        {
+          tipo: ActionTipo.COMPROMISO,
+          descripcion:
+            'Se asignó monitor académico y horario de asesorías adicionales. El aprendiz se compromete a asistir.',
+          fechaCompromiso: '2024-12-15',
+          responsable: `Aprendiz ${aprendices[2].nombres} ${aprendices[2].apellidos}`,
+        },
+        instructor,
+      );
+
+      if (coordinador) {
+        await this.disciplinarioService.updateEstado(
+          caso3.id,
+          {
+            estado: CaseEstado.CERRADO,
+            cierreResumen:
+              'El aprendiz cumplió con las asesorías y logró mejorar su rendimiento académico. Se evidencia progreso en las últimas evaluaciones. Caso cerrado satisfactoriamente.',
+          },
+          coordinador,
+        );
+
+        this.logger.log('Caso 3 CERRADO exitosamente');
+      }
+    } catch (error) {
+      this.logger.warn(`Error creando caso 3: ${error.message}`);
     }
   }
 

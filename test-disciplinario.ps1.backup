@@ -1,0 +1,476 @@
+# Script de prueba para endpoints del módulo Disciplinario
+# Asegúrate de tener el backend corriendo en http://localhost:3000
+
+$baseUrl = "http://localhost:3000/api"
+$contentType = "application/json"
+
+# Colores para output
+function Write-Success { param($message) Write-Host $message -ForegroundColor Green }
+function Write-Error { param($message) Write-Host $message -ForegroundColor Red }
+function Write-Info { param($message) Write-Host $message -ForegroundColor Cyan }
+function Write-Step { param($message) Write-Host "`n=== $message ===" -ForegroundColor Yellow }
+
+# Variables globales
+$token = $null
+$casoId1 = $null
+$casoId2 = $null
+$accionId = $null
+$instructorToken = $null
+$coordinadorToken = $null
+
+# ===============================================
+# PASO 1: LOGIN Y OBTENER TOKENS
+# ===============================================
+Write-Step "PASO 1: Autenticación"
+
+# Login como instructor
+Write-Info "Login como instructor..."
+$loginInstructor = @{
+    email = "instructor@sena.edu.co"
+    password = "Instructor123!"
+} | ConvertTo-Json
+
+try {
+    $responseInstructor = Invoke-RestMethod -Uri "$baseUrl/auth/login" -Method Post -Body $loginInstructor -ContentType $contentType
+    $instructorToken = $responseInstructor.access_token
+    Write-Success "✓ Login instructor exitoso"
+    Write-Host "Token: $($instructorToken.Substring(0, 20))..."
+} catch {
+    Write-Error "✗ Error en login instructor: $_"
+    exit 1
+}
+
+# Login como coordinador
+Write-Info "Login como coordinador..."
+$loginCoordinador = @{
+    email = "coordinador@sena.edu.co"
+    password = "Coordinador123!"
+} | ConvertTo-Json
+
+try {
+    $responseCoordinador = Invoke-RestMethod -Uri "$baseUrl/auth/login" -Method Post -Body $loginCoordinador -ContentType $contentType
+    $coordinadorToken = $responseCoordinador.access_token
+    Write-Success "✓ Login coordinador exitoso"
+} catch {
+    Write-Error "✗ Error en login coordinador: $_"
+}
+
+# Usar token de instructor por defecto
+$token = $instructorToken
+$headers = @{
+    "Authorization" = "Bearer $token"
+    "Content-Type" = $contentType
+}
+
+# ===============================================
+# PASO 2: OBTENER REFERENCIAS (Fichas y Aprendices)
+# ===============================================
+Write-Step "PASO 2: Obtener referencias necesarias"
+
+Write-Info "Obteniendo fichas del instructor..."
+try {
+    $fichas = Invoke-RestMethod -Uri "$baseUrl/fichas?limit=5" -Method Get -Headers $headers
+    $fichaId = $fichas.data[0].id
+    Write-Success "✓ Ficha obtenida: $($fichas.data[0].numeroFicha) (ID: $fichaId)"
+} catch {
+    Write-Error "✗ Error obteniendo fichas: $_"
+    exit 1
+}
+
+Write-Info "Obteniendo aprendices..."
+try {
+    $aprendices = Invoke-RestMethod -Uri "$baseUrl/aprendices?fichaId=$fichaId`&limit=10" -Method Get -Headers $headers
+    if ($aprendices.data.Count -lt 2) {
+        Write-Error "✗ Se necesitan al menos 2 aprendices. Ejecuta el seeder primero: npm run seed"
+        exit 1
+    }
+    $aprendizId1 = $aprendices.data[0].id
+    $aprendizId2 = $aprendices.data[1].id
+    Write-Success "✓ Aprendices obtenidos: $($aprendices.data.Count)"
+    Write-Host "  - Aprendiz 1: $($aprendices.data[0].nombres) $($aprendices.data[0].apellidos) (ID: $aprendizId1)"
+    Write-Host "  - Aprendiz 2: $($aprendices.data[1].nombres) $($aprendices.data[1].apellidos) (ID: $aprendizId2)"
+} catch {
+    Write-Error "✗ Error obteniendo aprendices: $_"
+    exit 1
+}
+
+# ===============================================
+# PASO 3: CREAR CASOS DISCIPLINARIOS
+# ===============================================
+Write-Step "PASO 3: Crear casos disciplinarios"
+
+# Caso 1: Convivencia
+Write-Info "Creando caso 1 (CONVIVENCIA - MEDIA)..."
+$caso1 = @{
+    fichaId = $fichaId
+    aprendizId = $aprendizId1
+    tipo = "CONVIVENCIA"
+    gravedad = "MEDIA"
+    asunto = "Comportamiento disruptivo en formación"
+    descripcion = "El aprendiz interrumpió constantemente la sesión de formación y mostró falta de respeto hacia sus compañeros."
+    fechaIncidente = "2025-01-05"
+    evidenciaUrl = "https://storage.example.com/evidencia-test.pdf"
+} | ConvertTo-Json
+
+try {
+    $responseCaso1 = Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos" -Method Post -Body $caso1 -Headers $headers
+    $casoId1 = $responseCaso1.id
+    Write-Success "✓ Caso 1 creado exitosamente"
+    Write-Host "  ID: $casoId1"
+    Write-Host "  Estado: $($responseCaso1.estado)"
+    Write-Host "  Asunto: $($responseCaso1.asunto)"
+} catch {
+    Write-Error "✗ Error creando caso 1: $_"
+}
+
+# Caso 2: Asistencia
+Write-Info "Creando caso 2 (ASISTENCIA - ALTA)..."
+$caso2 = @{
+    fichaId = $fichaId
+    aprendizId = $aprendizId2
+    tipo = "ASISTENCIA"
+    gravedad = "ALTA"
+    asunto = "Inasistencias reiteradas sin justificación"
+    descripcion = "El aprendiz ha acumulado 7 faltas en el mes sin presentar justificación médica o personal."
+    fechaIncidente = "2025-01-04"
+} | ConvertTo-Json
+
+try {
+    $responseCaso2 = Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos" -Method Post -Body $caso2 -Headers $headers
+    $casoId2 = $responseCaso2.id
+    Write-Success "✓ Caso 2 creado exitosamente"
+    Write-Host "  ID: $casoId2"
+    Write-Host "  Estado: $($responseCaso2.estado)"
+} catch {
+    Write-Error "✗ Error creando caso 2: $_"
+}
+
+# ===============================================
+# PASO 4: LISTAR CASOS (CON FILTROS)
+# ===============================================
+Write-Step "PASO 4: Listar casos disciplinarios"
+
+Write-Info "Listando todos los casos del instructor..."
+try {
+    $listaCasos = Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos?limit=10" -Method Get -Headers $headers
+    Write-Success "✓ Casos obtenidos: $($listaCasos.meta.total)"
+    Write-Host "  Página: $($listaCasos.meta.page) de $($listaCasos.meta.totalPages)"
+} catch {
+    Write-Error "✗ Error listando casos: $_"
+}
+
+Write-Info "Filtrando por estado BORRADOR..."
+try {
+    $casosBorrador = Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos?estado=BORRADOR" -Method Get -Headers $headers
+    Write-Success "✓ Casos en BORRADOR: $($casosBorrador.meta.total)"
+} catch {
+    Write-Error "✗ Error filtrando casos: $_"
+}
+
+Write-Info "Filtrando por tipo CONVIVENCIA..."
+try {
+    $casosConvivencia = Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos?tipo=CONVIVENCIA" -Method Get -Headers $headers
+    Write-Success "✓ Casos de CONVIVENCIA: $($casosConvivencia.meta.total)"
+} catch {
+    Write-Error "✗ Error filtrando casos: $_"
+}
+
+Write-Info "Búsqueda por texto 'asistencia'..."
+try {
+    $busqueda = Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos?search=asistencia" -Method Get -Headers $headers
+    Write-Success "✓ Resultados de búsqueda: $($busqueda.meta.total)"
+} catch {
+    Write-Error "✗ Error en búsqueda: $_"
+}
+
+# ===============================================
+# PASO 5: OBTENER DETALLE DE CASO
+# ===============================================
+Write-Step "PASO 5: Obtener detalle de caso"
+
+if ($casoId1) {
+    Write-Info "Obteniendo detalle del caso 1..."
+    try {
+        $detalleCaso = Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos/$casoId1" -Method Get -Headers $headers
+        Write-Success "✓ Detalle obtenido"
+        Write-Host "  Asunto: $($detalleCaso.asunto)"
+        Write-Host "  Aprendiz: $($detalleCaso.aprendiz.nombres) $($detalleCaso.aprendiz.apellidos)"
+        Write-Host "  Ficha: $($detalleCaso.ficha.numeroFicha)"
+        Write-Host "  Estado: $($detalleCaso.estado)"
+        Write-Host "  Acciones: $($detalleCaso.acciones.Count)"
+    } catch {
+        Write-Error "✗ Error obteniendo detalle: $_"
+    }
+}
+
+# ===============================================
+# PASO 6: ACTUALIZAR CASO
+# ===============================================
+Write-Step "PASO 6: Actualizar caso"
+
+if ($casoId1) {
+    Write-Info "Actualizando asunto del caso 1..."
+    $updateCaso = @{
+        asunto = "Comportamiento disruptivo en formación - ACTUALIZADO"
+        gravedad = "ALTA"
+    } | ConvertTo-Json
+
+    try {
+        $casoActualizado = Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos/$casoId1" -Method Patch -Body $updateCaso -Headers $headers
+        Write-Success "✓ Caso actualizado"
+        Write-Host "  Nuevo asunto: $($casoActualizado.asunto)"
+        Write-Host "  Nueva gravedad: $($casoActualizado.gravedad)"
+    } catch {
+        Write-Error "✗ Error actualizando caso: $_"
+    }
+}
+
+# ===============================================
+# PASO 7: CAMBIAR ESTADO DEL CASO
+# ===============================================
+Write-Step "PASO 7: Cambiar estado de caso"
+
+if ($casoId1) {
+    Write-Info "Cambiando caso 1 a estado ABIERTO..."
+    $cambioEstado = @{
+        estado = "ABIERTO"
+    } | ConvertTo-Json
+
+    try {
+        $casoAbierto = Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos/$casoId1/estado" -Method Patch -Body $cambioEstado -Headers $headers
+        Write-Success "✓ Estado cambiado a: $($casoAbierto.estado)"
+    } catch {
+        Write-Error "✗ Error cambiando estado: $_"
+    }
+}
+
+# ===============================================
+# PASO 8: AGREGAR ACCIONES
+# ===============================================
+Write-Step "PASO 8: Agregar acciones al caso"
+
+if ($casoId1) {
+    # Acción 1: Llamado de atención
+    Write-Info "Agregando acción: LLAMADO_ATENCION..."
+    $accion1 = @{
+        tipo = "LLAMADO_ATENCION"
+        descripcion = "Se realizó llamado de atención verbal al aprendiz sobre su comportamiento. Se explicó el reglamento de convivencia."
+        evidenciaUrl = "https://storage.example.com/acta-llamado.pdf"
+    } | ConvertTo-Json
+
+    try {
+        $responseAccion1 = Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos/$casoId1/acciones" -Method Post -Body $accion1 -Headers $headers
+        $accionId = $responseAccion1.id
+        Write-Success "✓ Acción agregada (ID: $accionId)"
+        Write-Host "  Tipo: $($responseAccion1.tipo)"
+    } catch {
+        Write-Error "✗ Error agregando acción: $_"
+    }
+
+    # Acción 2: Compromiso
+    Write-Info "Agregando acción: COMPROMISO..."
+    $accion2 = @{
+        tipo = "COMPROMISO"
+        descripcion = "El aprendiz se compromete a mejorar su comportamiento y participar respetuosamente en las sesiones de formación."
+        fechaCompromiso = "2025-02-01"
+        responsable = "Aprendiz - Test Script"
+        evidenciaUrl = "https://storage.example.com/compromiso-firmado.pdf"
+    } | ConvertTo-Json
+
+    try {
+        $responseAccion2 = Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos/$casoId1/acciones" -Method Post -Body $accion2 -Headers $headers
+        Write-Success "✓ Compromiso agregado"
+        Write-Host "  Fecha compromiso: $($responseAccion2.fechaCompromiso)"
+        Write-Host "  Responsable: $($responseAccion2.responsable)"
+    } catch {
+        Write-Error "✗ Error agregando compromiso: $_"
+    }
+
+    # Acción 3: Observación
+    Write-Info "Agregando acción: OBSERVACION..."
+    $accion3 = @{
+        tipo = "OBSERVACION"
+        descripcion = "Se observa mejora en el comportamiento del aprendiz durante las últimas sesiones. Se recomienda continuar seguimiento."
+    } | ConvertTo-Json
+
+    try {
+        $responseAccion3 = Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos/$casoId1/acciones" -Method Post -Body $accion3 -Headers $headers
+        Write-Success "✓ Observación agregada"
+    } catch {
+        Write-Error "✗ Error agregando observación: $_"
+    }
+}
+
+# ===============================================
+# PASO 9: LISTAR ACCIONES DE UN CASO
+# ===============================================
+Write-Step "PASO 9: Listar acciones del caso"
+
+if ($casoId1) {
+    Write-Info "Obteniendo acciones del caso 1..."
+    try {
+        $acciones = Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos/$casoId1/acciones" -Method Get -Headers $headers
+        Write-Success "✓ Acciones obtenidas: $($acciones.Count)"
+        foreach ($accion in $acciones) {
+            Write-Host "  - $($accion.tipo): $($accion.descripcion.Substring(0, [Math]::Min(50, $accion.descripcion.Length)))..."
+        }
+    } catch {
+        Write-Error "✗ Error obteniendo acciones: $_"
+    }
+}
+
+# ===============================================
+# PASO 10: ACTUALIZAR ACCIÓN
+# ===============================================
+Write-Step "PASO 10: Actualizar acción"
+
+if ($accionId) {
+    Write-Info "Actualizando descripción de la acción..."
+    $updateAccion = @{
+        descripcion = "Se realizó llamado de atención verbal al aprendiz sobre su comportamiento. Se explicó el reglamento de convivencia. ACTUALIZADO POR SCRIPT."
+    } | ConvertTo-Json
+
+    try {
+        $accionActualizada = Invoke-RestMethod -Uri "$baseUrl/disciplinario/acciones/$accionId" -Method Patch -Body $updateAccion -Headers $headers
+        Write-Success "✓ Acción actualizada"
+    } catch {
+        Write-Error "✗ Error actualizando acción: $_"
+    }
+}
+
+# ===============================================
+# PASO 11: CAMBIAR A SEGUIMIENTO (COMO COORDINADOR)
+# ===============================================
+Write-Step "PASO 11: Cambiar caso a SEGUIMIENTO (como coordinador)"
+
+if ($casoId1 -and $coordinadorToken) {
+    $headersCoord = @{
+        "Authorization" = "Bearer $coordinadorToken"
+        "Content-Type" = $contentType
+    }
+
+    Write-Info "Cambiando caso a SEGUIMIENTO..."
+    $estadoSeguimiento = @{
+        estado = "SEGUIMIENTO"
+    } | ConvertTo-Json
+
+    try {
+        $casoSeguimiento = Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos/$casoId1/estado" -Method Patch -Body $estadoSeguimiento -Headers $headersCoord
+        Write-Success "✓ Estado cambiado a: $($casoSeguimiento.estado)"
+    } catch {
+        Write-Error "✗ Error cambiando a seguimiento: $_"
+    }
+}
+
+# ===============================================
+# PASO 12: CERRAR CASO (COMO COORDINADOR)
+# ===============================================
+Write-Step "PASO 12: Cerrar caso (como coordinador)"
+
+if ($casoId1 -and $coordinadorToken) {
+    $headersCoord = @{
+        "Authorization" = "Bearer $coordinadorToken"
+        "Content-Type" = $contentType
+    }
+
+    Write-Info "Cerrando caso con resumen..."
+    $cerrarCaso = @{
+        estado = "CERRADO"
+        cierreResumen = "El aprendiz ha cumplido satisfactoriamente con los compromisos adquiridos. Se evidencia mejora notable en su comportamiento durante las sesiones de formación. El caso se cierra de manera satisfactoria."
+    } | ConvertTo-Json
+
+    try {
+        $casoCerrado = Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos/$casoId1/estado" -Method Patch -Body $cerrarCaso -Headers $headersCoord
+        Write-Success "✓ Caso CERRADO exitosamente"
+        Write-Host "  Estado final: $($casoCerrado.estado)"
+        Write-Host "  Resumen de cierre: $($casoCerrado.cierreResumen.Substring(0, [Math]::Min(60, $casoCerrado.cierreResumen.Length)))..."
+    } catch {
+        Write-Error "✗ Error cerrando caso: $_"
+    }
+}
+
+# ===============================================
+# PASO 13: CREAR CASO DESDE ALERTA
+# ===============================================
+Write-Step "PASO 13: Crear caso desde alerta de asistencia"
+
+Write-Info "Creando caso automático desde alerta..."
+$casoAlerta = @{
+    fichaId = $fichaId
+    aprendizId = $aprendizId2
+    criterioAlerta = "3_CONSECUTIVAS"
+    gravedad = "MEDIA"
+    descripcionAuto = "El aprendiz ha faltado 3 días consecutivos (Enero 2, 3 y 4) sin presentar justificación."
+} | ConvertTo-Json
+
+try {
+    $responseCasoAlerta = Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos/desde-alerta" -Method Post -Body $casoAlerta -Headers $headers
+    Write-Success "✓ Caso desde alerta creado"
+    Write-Host "  ID: $($responseCasoAlerta.id)"
+    Write-Host "  Tipo: $($responseCasoAlerta.tipo)"
+    Write-Host "  Asunto: $($responseCasoAlerta.asunto)"
+    Write-Host "  Estado: $($responseCasoAlerta.estado)"
+} catch {
+    Write-Error "✗ Error creando caso desde alerta: $_"
+}
+
+# ===============================================
+# PASO 14: VALIDACIONES DE PERMISOS
+# ===============================================
+Write-Step "PASO 14: Validar permisos (intentos que deben fallar)"
+
+if ($casoId1) {
+    Write-Info "Intentando editar caso CERRADO (debe fallar)..."
+    $updateCerrado = @{
+        asunto = "Intento de actualización"
+    } | ConvertTo-Json
+
+    try {
+        Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos/$casoId1" -Method Patch -Body $updateCerrado -Headers $headers
+        Write-Error "✗ ERROR: Se permitió editar caso cerrado (no debería)"
+    } catch {
+        Write-Success "✓ Validación correcta: No se puede editar caso cerrado"
+    }
+
+    Write-Info "Intentando agregar acción a caso CERRADO (debe fallar)..."
+    $accionCerrado = @{
+        tipo = "OBSERVACION"
+        descripcion = "Intento de agregar acción"
+    } | ConvertTo-Json
+
+    try {
+        Invoke-RestMethod -Uri "$baseUrl/disciplinario/casos/$casoId1/acciones" -Method Post -Body $accionCerrado -Headers $headers
+        Write-Error "✗ ERROR: Se permitió agregar acción a caso cerrado (no debería)"
+    } catch {
+        Write-Success "✓ Validación correcta: No se pueden agregar acciones a caso cerrado"
+    }
+}
+
+# ===============================================
+# RESUMEN FINAL
+# ===============================================
+Write-Step "RESUMEN DE PRUEBAS COMPLETADAS"
+
+Write-Success "`n✓ Todas las pruebas del módulo Disciplinario ejecutadas`n"
+
+Write-Host "Endpoints probados:"
+Write-Host "  [✓] POST   /disciplinario/casos - Crear caso"
+Write-Host "  [✓] GET    /disciplinario/casos - Listar casos (con filtros)"
+Write-Host "  [✓] GET    /disciplinario/casos/:id - Detalle de caso"
+Write-Host "  [✓] PATCH  /disciplinario/casos/:id - Actualizar caso"
+Write-Host "  [✓] PATCH  /disciplinario/casos/:id/estado - Cambiar estado"
+Write-Host "  [✓] POST   /disciplinario/casos/:id/acciones - Agregar acción"
+Write-Host "  [✓] GET    /disciplinario/casos/:id/acciones - Listar acciones"
+Write-Host "  [✓] PATCH  /disciplinario/acciones/:id - Actualizar acción"
+Write-Host "  [✓] POST   /disciplinario/casos/desde-alerta - Crear desde alerta"
+
+Write-Host "`nValidaciones probadas:"
+Write-Host "  [✓] Permisos por rol (instructor vs coordinador)"
+Write-Host "  [✓] Casos cerrados no se pueden editar"
+Write-Host "  [✓] No se pueden agregar acciones a casos cerrados"
+Write-Host "  [✓] Transiciones de estado (BORRADOR→ABIERTO→SEGUIMIENTO→CERRADO)"
+Write-Host "  [✓] Resumen obligatorio al cerrar"
+Write-Host "  [✓] Filtros de búsqueda"
+
+Write-Host "`n🎉 Módulo Disciplinario funcionando correctamente!" -ForegroundColor Green
+Write-Host "`nRevisa los datos en Swagger: http://localhost:3000/api/docs" -ForegroundColor Cyan

@@ -6,7 +6,7 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, FileText, CheckCircle, XCircle, AlertCircle, Edit } from 'lucide-react';
+import { ArrowLeft, FileText, CheckCircle, XCircle, AlertCircle, Edit, Upload, X } from 'lucide-react';
 import api from '@/lib/api';
 import { ClaseSesion, Asistencia } from '@/types';
 
@@ -274,6 +274,73 @@ function JustifyModal({
   const [motivo, setMotivo] = useState('');
   const [evidenciaUrl, setEvidenciaUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de archivo
+    const allowedTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    
+    if (!allowedTypes.includes(file.type)) {
+      alert('Tipo de archivo no permitido. Use PDF, imágenes (JPG, PNG, WEBP) o documentos Word.');
+      return;
+    }
+
+    // Validar tamaño (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('El archivo no debe superar 5MB');
+      return;
+    }
+
+    setSelectedFile(file);
+    setEvidenciaUrl(''); // Limpiar URL manual si selecciona archivo
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) return;
+
+    try {
+      setUploading(true);
+      setUploadProgress(30);
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      setUploadProgress(60);
+      const response = await api.post('/upload/evidencia', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setUploadProgress(100);
+      setEvidenciaUrl(response.data.url);
+      alert('Archivo subido correctamente');
+    } catch (error: any) {
+      console.error('Error uploading file:', error);
+      alert(error.response?.data?.message || 'Error al subir el archivo');
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setEvidenciaUrl('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,9 +367,17 @@ function JustifyModal({
     }
   };
 
+  const getFileIcon = (fileName: string) => {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'webp'].includes(ext || '')) return '🖼️';
+    if (ext === 'pdf') return '📄';
+    if (['doc', 'docx'].includes(ext || '')) return '📝';
+    return '📎';
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <Card className="w-full max-w-md p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-4">Justificar Ausencia</h2>
         <p className="text-gray-600 mb-4">
           Aprendiz: {asistencia.aprendiz?.nombres} {asistencia.aprendiz?.apellidos}
@@ -319,33 +394,130 @@ function JustifyModal({
               rows={4}
               placeholder="Describa el motivo de la ausencia..."
               required
+              disabled={loading || uploading}
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              URL de Evidencia (opcional)
+              Evidencia (opcional)
             </label>
-            <input
-              type="url"
-              value={evidenciaUrl}
-              onChange={(e) => setEvidenciaUrl(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="https://ejemplo.com/evidencia.pdf"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Puede adjuntar un enlace a un documento, imagen o certificado
-            </p>
+            
+            {/* Selector de archivo */}
+            {!evidenciaUrl && (
+              <div className="space-y-2">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-green-500 transition-colors">
+                  <input
+                    type="file"
+                    id="file-upload"
+                    className="hidden"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                    onChange={handleFileChange}
+                    disabled={loading || uploading}
+                  />
+                  <label
+                    htmlFor="file-upload"
+                    className="cursor-pointer flex flex-col items-center"
+                  >
+                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                    <span className="text-sm text-gray-600">
+                      Haz clic para seleccionar un archivo
+                    </span>
+                    <span className="text-xs text-gray-500 mt-1">
+                      PDF, imágenes, Word (máx. 5MB)
+                    </span>
+                  </label>
+                </div>
+
+                {/* Archivo seleccionado */}
+                {selectedFile && (
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-2xl">{getFileIcon(selectedFile.name)}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {selectedFile.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {(selectedFile.size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleUpload}
+                        disabled={uploading || loading}
+                        className="text-xs"
+                      >
+                        {uploading ? 'Subiendo...' : 'Subir'}
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={handleRemoveFile}
+                        disabled={uploading || loading}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Barra de progreso */}
+                {uploading && (
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Evidencia subida */}
+            {evidenciaUrl && (
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="text-sm font-medium text-green-900">
+                      Archivo subido correctamente
+                    </p>
+                    <a
+                      href={evidenciaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-green-700 hover:underline"
+                    >
+                      Ver archivo
+                    </a>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveFile}
+                  disabled={loading}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
-          <div className="flex gap-2 justify-end">
+
+          <div className="flex gap-2 justify-end pt-2">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              disabled={loading}
+              disabled={loading || uploading}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || uploading}>
               {loading ? 'Guardando...' : 'Justificar'}
             </Button>
           </div>
