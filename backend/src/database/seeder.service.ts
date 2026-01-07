@@ -5,6 +5,7 @@ import { UsersService } from '../users/users.service';
 import { FichasService } from '../fichas/fichas.service';
 import { AprendicesService } from '../aprendices/aprendices.service';
 import { DisciplinarioService } from '../disciplinario/disciplinario.service';
+import { AgendaSeeder } from './agenda-seeder';
 import { UserRole } from '../users/entities/user.entity';
 import { JornadaFicha, EstadoFicha } from '../fichas/entities/ficha.entity';
 import { TipoDocumento, EstadoAcademico } from '../aprendices/entities/aprendiz.entity';
@@ -22,6 +23,7 @@ export class SeederService {
     private readonly fichasService: FichasService,
     private readonly aprendicesService: AprendicesService,
     private readonly disciplinarioService: DisciplinarioService,
+    private readonly agendaSeeder: AgendaSeeder,
   ) {}
 
   async seed() {
@@ -32,6 +34,7 @@ export class SeederService {
     await this.seedProgramas();
     await this.seedFichas();
     await this.seedAprendices();
+    await this.agendaSeeder.seed();
     await this.seedDisciplinario();
 
     this.logger.log('Seeders completados exitosamente');

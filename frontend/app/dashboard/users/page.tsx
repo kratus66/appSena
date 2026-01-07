@@ -259,7 +259,7 @@ export default function UsersPage() {
                 </div>
               </div>
               <select
-                className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600"
+                className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 text-gray-900 font-medium"
                 value={rolFilter}
                 onChange={(e) => setRolFilter(e.target.value)}
               >
@@ -283,10 +283,10 @@ export default function UsersPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total</p>
-                  <p className="text-2xl font-bold">{users?.length || 0}</p>
+                  <p className="text-sm text-gray-800 font-semibold">Total</p>
+                  <p className="text-2xl font-bold text-gray-900">{users?.length || 0}</p>
                 </div>
-                <UsersIcon className="h-8 w-8 text-gray-500" />
+                <UsersIcon className="h-8 w-8 text-gray-700" />
               </div>
             </CardContent>
           </Card>
@@ -297,7 +297,7 @@ export default function UsersPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Admins</p>
+                  <p className="text-sm text-gray-800 font-semibold">Admins</p>
                   <p className="text-2xl font-bold text-red-600">
                     {users?.filter((u) => u.rol === 'admin').length || 0}
                   </p>
@@ -313,7 +313,7 @@ export default function UsersPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Instructores</p>
+                  <p className="text-sm text-gray-800 font-semibold">Instructores</p>
                   <p className="text-2xl font-bold text-blue-600">
                     {users?.filter((u) => u.rol === 'instructor').length || 0}
                   </p>
@@ -329,7 +329,7 @@ export default function UsersPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Coordinadores</p>
+                  <p className="text-sm text-gray-800 font-semibold">Coordinadores</p>
                   <p className="text-2xl font-bold text-purple-600">
                     {users?.filter((u) => u.rol === 'coordinador').length || 0}
                   </p>

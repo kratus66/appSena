@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Bell, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { NotificationsDropdown } from '@/components/dashboard/notifications-dropdown';
 
 export function Navbar() {
   return (
@@ -21,10 +22,7 @@ export function Navbar() {
       </div>
 
       <div className="flex items-center space-x-4">
-        <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
-          <Bell size={20} />
-          <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-        </button>
+        <NotificationsDropdown />
       </div>
     </header>
   );

@@ -156,8 +156,8 @@ export default function FichasPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Fichas</p>
-                  <p className="text-2xl font-bold">{fichas.length}</p>
+                  <p className="text-sm text-gray-800 font-semibold">Total Fichas</p>
+                  <p className="text-2xl font-bold text-gray-900">{fichas.length}</p>
                 </div>
                 <FileText className="h-8 w-8 text-blue-500" />
               </div>
@@ -170,7 +170,7 @@ export default function FichasPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Activas</p>
+                  <p className="text-sm text-gray-800 font-semibold">Activas</p>
                   <p className="text-2xl font-bold text-green-600">
                     {fichas.filter((f) => f.estado === 'ACTIVA').length}
                   </p>
@@ -188,12 +188,12 @@ export default function FichasPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Finalizadas</p>
-                  <p className="text-2xl font-bold text-gray-600">
+                  <p className="text-sm text-gray-800 font-semibold">Finalizadas</p>
+                  <p className="text-2xl font-bold text-gray-700">
                     {fichas.filter((f) => f.estado === 'FINALIZADA').length}
                   </p>
                 </div>
-                <Calendar className="h-8 w-8 text-gray-500" />
+                <Calendar className="h-8 w-8 text-gray-700" />
               </div>
             </CardContent>
           </Card>
@@ -201,7 +201,7 @@ export default function FichasPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Promedio Aprendices</p>
+                  <p className="text-sm text-gray-800 font-semibold">Promedio Aprendices</p>
                   <p className="text-2xl font-bold text-purple-600">25</p>
                 </div>
                 <Users className="h-8 w-8 text-purple-500" />

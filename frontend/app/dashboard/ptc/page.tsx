@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Search, FileText, Calendar, User, AlertTriangle } from 'lucide-react';
+import { PlusCircle, Search, FileText, Calendar, User, AlertTriangle, Plus, Filter } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface Ptc {
@@ -21,8 +22,10 @@ interface Ptc {
   fechaCierre?: string;
   estado: 'BORRADOR' | 'VIGENTE' | 'CERRADO';
   ficha?: {
-    numero: string;
-    nombrePrograma: string;
+    numeroFicha: string;
+    programa?: {
+      nombre: string;
+    };
   };
   aprendiz?: {
     nombres: string;
@@ -30,8 +33,9 @@ interface Ptc {
     documento: string;
   };
   casoDisciplinario?: {
-    numeroConsecutivo: string;
-    motivo: string;
+    id: string;
+    asunto: string;
+    tipo: string;
   };
   createdAt: string;
 }
@@ -55,7 +59,7 @@ export default function PtcPage() {
       const params: any = {};
       
       if (searchTerm) params.search = searchTerm;
-      if (estadoFilter) params.estado = estadoFilter;
+      if (estadoFilter && estadoFilter !== 'all') params.estado = estadoFilter;
       if (fichaFilter) params.fichaId = fichaFilter;
 
       const response = await api.get('/ptc', { params });
@@ -75,155 +79,164 @@ export default function PtcPage() {
 
   const getEstadoBadge = (estado: string) => {
     const variants: any = {
-      BORRADOR: 'secondary',
-      VIGENTE: 'default',
-      CERRADO: 'outline',
+      BORRADOR: 'warning',
+      VIGENTE: 'success',
+      CERRADO: 'default',
     };
     
-    const colors: any = {
-      BORRADOR: 'bg-yellow-100 text-yellow-800',
-      VIGENTE: 'bg-green-100 text-green-800',
-      CERRADO: 'bg-gray-100 text-gray-800',
-    };
-
-    return (
-      <Badge className={colors[estado]}>
-        {estado}
-      </Badge>
-    );
+    return <Badge variant={variants[estado] || 'default'}>{estado}</Badge>;
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Plan de Trabajo Concertado (PTC)
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Gestión de planes de trabajo para aprendices
-          </p>
-        </div>
-        <Button onClick={() => router.push('/dashboard/ptc/new')}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Nuevo PTC
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtros de búsqueda</CardTitle>
-          <CardDescription>Busca y filtra los PTCs</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSearch} className="flex gap-4">
-            <div className="flex-1">
-              <Input
-                placeholder="Buscar por aprendiz, ficha o motivo..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            <Select value={estadoFilter} onValueChange={setEstadoFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
-                <SelectItem value="BORRADOR">Borrador</SelectItem>
-                <SelectItem value="VIGENTE">Vigente</SelectItem>
-                <SelectItem value="CERRADO">Cerrado</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button type="submit">
-              <Search className="mr-2 h-4 w-4" />
-              Buscar
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
-          <p className="mt-2 text-sm text-muted-foreground">Cargando PTCs...</p>
-        </div>
-      ) : ptcs.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-12">
-            <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">No hay PTCs</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Crea el primer PTC para comenzar
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-950">Plan de Trabajo Concertado (PTC)</h1>
+            <p className="text-gray-600 mt-1 font-medium">
+              Gestión de planes de trabajo para aprendices
             </p>
-            <Button className="mt-4" onClick={() => router.push('/dashboard/ptc/new')}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Crear PTC
-            </Button>
+          </div>
+          <Button
+            onClick={() => router.push('/dashboard/ptc/new')}
+            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nuevo PTC</span>
+          </Button>
+        </div>
+
+        {/* Filters */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <Input
+                    type="search"
+                    placeholder="Buscar por aprendiz, ficha o motivo..."
+                    className="pl-10"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+              <select
+                className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 text-gray-800 font-medium"
+                value={estadoFilter}
+                onChange={(e) => setEstadoFilter(e.target.value)}
+              >
+                <option value="all">Todos los estados</option>
+                <option value="BORRADOR">Borrador</option>
+                <option value="VIGENTE">Vigente</option>
+                <option value="CERRADO">Cerrado</option>
+              </select>
+              <Button
+                onClick={fetchPtcs}
+                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+              >
+                <Search size={20} />
+                <span>Buscar</span>
+              </Button>
+            </div>
           </CardContent>
         </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {ptcs.map((ptc) => (
-            <Card
-              key={ptc.id}
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => router.push(`/dashboard/ptc/${ptc.id}`)}
-            >
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-lg">
-                      {ptc.aprendiz?.nombres} {ptc.aprendiz?.apellidos}
-                    </CardTitle>
-                    <CardDescription>
-                      {ptc.aprendiz?.documento}
-                    </CardDescription>
-                  </div>
-                  {getEstadoBadge(ptc.estado)}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center text-sm">
-                  <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Ficha:</span>
-                  <span className="ml-1 text-muted-foreground">
-                    {ptc.ficha?.numero}
-                  </span>
-                </div>
-                
-                <div className="flex items-center text-sm">
-                  <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Inicio:</span>
-                  <span className="ml-1 text-muted-foreground">
-                    {new Date(ptc.fechaInicio).toLocaleDateString()}
-                  </span>
-                </div>
 
-                {ptc.casoDisciplinario && (
-                  <div className="flex items-center text-sm">
-                    <AlertTriangle className="mr-2 h-4 w-4 text-orange-500" />
-                    <span className="text-orange-600 text-xs">
-                      Caso #{ptc.casoDisciplinario.numeroConsecutivo}
-                    </span>
-                  </div>
-                )}
+        {/* PTCs List */}
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+            <p className="mt-2 text-sm text-muted-foreground">Cargando PTCs...</p>
+          </div>
+        ) : ptcs.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-12">
+              <FileText className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-4 text-lg font-semibold text-gray-900">No hay PTCs registrados</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                Comienza creando el primer Plan de Trabajo Concertado
+              </p>
+              <Button 
+                className="mt-4 bg-green-600 hover:bg-green-700" 
+                onClick={() => router.push('/dashboard/ptc/new')}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Crear Primer PTC
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {ptcs.map((ptc) => (
+                <Card
+                  key={ptc.id}
+                  className="cursor-pointer hover:shadow-lg transition-shadow border-gray-200"
+                  onClick={() => router.push(`/dashboard/ptc/${ptc.id}`)}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1 flex-1">
+                        <CardTitle className="text-lg text-gray-900">
+                          {ptc.aprendiz?.nombres} {ptc.aprendiz?.apellidos}
+                        </CardTitle>
+                        <CardDescription className="text-gray-600">
+                          Doc: {ptc.aprendiz?.documento}
+                        </CardDescription>
+                      </div>
+                      {getEstadoBadge(ptc.estado)}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center text-sm text-gray-700">
+                      <FileText className="mr-2 h-4 w-4 text-gray-500" />
+                      <span className="font-medium">Ficha:</span>
+                      <span className="ml-1">
+                        {ptc.ficha?.numeroFicha || 'N/A'}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center text-sm text-gray-700">
+                      <Calendar className="mr-2 h-4 w-4 text-gray-500" />
+                      <span className="font-medium">Inicio:</span>
+                      <span className="ml-1">
+                        {new Date(ptc.fechaInicio).toLocaleDateString('es-CO')}
+                      </span>
+                    </div>
 
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {ptc.motivo}
+                    {ptc.casoDisciplinario && (
+                      <div className="flex items-center text-sm">
+                        <AlertTriangle className="mr-2 h-4 w-4 text-orange-500" />
+                        <span className="text-orange-600 font-medium text-xs">
+                          Caso Disciplinario: {ptc.casoDisciplinario.asunto}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="pt-2 border-t border-gray-100">
+                      <p className="text-sm text-gray-600 font-medium mb-1">Motivo:</p>
+                      <p className="text-sm text-gray-700 line-clamp-2">
+                        {ptc.motivo}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Pagination Info */}
+            {total > 0 && (
+              <div className="flex justify-center mt-6">
+                <p className="text-sm text-gray-600 font-medium">
+                  Mostrando {ptcs.length} de {total} PTCs
                 </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {!loading && total > 0 && (
-        <div className="text-center text-sm text-muted-foreground">
-          Mostrando {ptcs.length} de {total} PTCs
-        </div>
-      )}
-    </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </DashboardLayout>
   );
 }

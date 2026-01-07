@@ -9,8 +9,11 @@ import {
   Query,
   UseGuards,
   Request,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { PtcService } from './ptc.service';
 import { CreatePtcDto } from './dto/create-ptc.dto';
 import { UpdatePtcDto } from './dto/update-ptc.dto';
@@ -62,82 +65,6 @@ export class PtcController {
     return this.ptcService.findAllPtc(query, req.user);
   }
 
-  @Get(':id')
-  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Obtener detalle de un PTC' })
-  @ApiResponse({ status: 200, description: 'Detalle del PTC' })
-  findOnePtc(@Param('id') id: string, @Request() req) {
-    return this.ptcService.findOnePtc(id, req.user);
-  }
-
-  @Patch(':id')
-  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Actualizar un PTC (solo BORRADOR)' })
-  @ApiResponse({ status: 200, description: 'PTC actualizado' })
-  updatePtc(@Param('id') id: string, @Body() updatePtcDto: UpdatePtcDto, @Request() req) {
-    return this.ptcService.updatePtc(id, updatePtcDto, req.user);
-  }
-
-  @Patch(':id/estado')
-  @Roles(UserRole.COORDINADOR, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Cambiar estado del PTC (solo COORDINADOR/ADMIN)' })
-  @ApiResponse({ status: 200, description: 'Estado actualizado' })
-  updatePtcEstado(@Param('id') id: string, @Body() updateEstadoDto: UpdatePtcEstadoDto, @Request() req) {
-    return this.ptcService.updatePtcEstado(id, updateEstadoDto, req.user);
-  }
-
-  @Delete(':id')
-  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Eliminar un PTC (solo BORRADOR)' })
-  @ApiResponse({ status: 200, description: 'PTC eliminado' })
-  deletePtc(@Param('id') id: string, @Request() req) {
-    return this.ptcService.deletePtc(id, req.user);
-  }
-
-  // ==================== PTC ITEMS ENDPOINTS ====================
-
-  @Post(':ptcId/items')
-  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Agregar compromiso/item al PTC' })
-  @ApiResponse({ status: 201, description: 'Item agregado exitosamente' })
-  addItemToPtc(@Param('ptcId') ptcId: string, @Body() createItemDto: CreatePtcItemDto, @Request() req) {
-    return this.ptcService.addItemToPtc(ptcId, createItemDto, req.user);
-  }
-
-  @Patch(':ptcId/items/:itemId')
-  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Actualizar un item del PTC' })
-  @ApiResponse({ status: 200, description: 'Item actualizado' })
-  updatePtcItem(
-    @Param('ptcId') ptcId: string,
-    @Param('itemId') itemId: string,
-    @Body() updateItemDto: UpdatePtcItemDto,
-    @Request() req,
-  ) {
-    return this.ptcService.updatePtcItem(ptcId, itemId, updateItemDto, req.user);
-  }
-
-  @Patch(':ptcId/items/:itemId/estado')
-  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Actualizar estado de cumplimiento de un item' })
-  @ApiResponse({ status: 200, description: 'Estado del item actualizado' })
-  updatePtcItemEstado(
-    @Param('ptcId') ptcId: string,
-    @Param('itemId') itemId: string,
-    @Body() updateEstadoDto: UpdatePtcItemEstadoDto,
-    @Request() req,
-  ) {
-    return this.ptcService.updatePtcItemEstado(ptcId, itemId, updateEstadoDto, req.user);
-  }
-
-  @Delete(':ptcId/items/:itemId')
-  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Eliminar un item del PTC' })
-  @ApiResponse({ status: 200, description: 'Item eliminado' })
-  deletePtcItem(@Param('ptcId') ptcId: string, @Param('itemId') itemId: string, @Request() req) {
-    return this.ptcService.deletePtcItem(ptcId, itemId, req.user);
-  }
-
   // ==================== ACTAS ENDPOINTS ====================
 
   @Post('actas')
@@ -186,5 +113,101 @@ export class PtcController {
   @ApiResponse({ status: 200, description: 'Acta eliminada' })
   deleteActa(@Param('id') id: string, @Request() req) {
     return this.ptcService.deleteActa(id, req.user);
+  }
+
+  // ==================== PTC BY ID ENDPOINTS ====================
+
+  @Get(':id')
+  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Obtener detalle de un PTC' })
+  @ApiResponse({ status: 200, description: 'Detalle del PTC' })
+  findOnePtc(@Param('id') id: string, @Request() req) {
+    return this.ptcService.findOnePtc(id, req.user);
+  }
+
+  @Patch(':id')
+  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Actualizar un PTC (solo BORRADOR)' })
+  @ApiResponse({ status: 200, description: 'PTC actualizado' })
+  updatePtc(@Param('id') id: string, @Body() updatePtcDto: UpdatePtcDto, @Request() req) {
+    return this.ptcService.updatePtc(id, updatePtcDto, req.user);
+  }
+
+  @Patch(':id/estado')
+  @Roles(UserRole.COORDINADOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Cambiar estado del PTC (solo COORDINADOR/ADMIN)' })
+  @ApiResponse({ status: 200, description: 'Estado actualizado' })
+  updatePtcEstado(@Param('id') id: string, @Body() updateEstadoDto: UpdatePtcEstadoDto, @Request() req) {
+    return this.ptcService.updatePtcEstado(id, updateEstadoDto, req.user);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Eliminar un PTC (solo BORRADOR)' })
+  @ApiResponse({ status: 200, description: 'PTC eliminado' })
+  deletePtc(@Param('id') id: string, @Request() req) {
+    return this.ptcService.deletePtc(id, req.user);
+  }
+
+  // ==================== PTC ITEMS ENDPOINTS ====================
+
+  @Get(':ptcId/items')
+  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Obtener items/compromisos de un PTC' })
+  @ApiResponse({ status: 200, description: 'Lista de items del PTC' })
+  getPtcItems(@Param('ptcId') ptcId: string, @Request() req) {
+    return this.ptcService.getPtcItems(ptcId, req.user);
+  }
+
+  @Post(':ptcId/items')
+  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Agregar compromiso/item al PTC' })
+  @ApiResponse({ status: 201, description: 'Item agregado exitosamente' })
+  addItemToPtc(@Param('ptcId') ptcId: string, @Body() createItemDto: CreatePtcItemDto, @Request() req) {
+    return this.ptcService.addItemToPtc(ptcId, createItemDto, req.user);
+  }
+
+  @Patch(':ptcId/items/:itemId')
+  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Actualizar un item del PTC' })
+  @ApiResponse({ status: 200, description: 'Item actualizado' })
+  updatePtcItem(
+    @Param('ptcId') ptcId: string,
+    @Param('itemId') itemId: string,
+    @Body() updateItemDto: UpdatePtcItemDto,
+    @Request() req,
+  ) {
+    return this.ptcService.updatePtcItem(ptcId, itemId, updateItemDto, req.user);
+  }
+
+  @Patch(':ptcId/items/:itemId/estado')
+  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Actualizar estado de cumplimiento de un item' })
+  @ApiResponse({ status: 200, description: 'Estado del item actualizado' })
+  updatePtcItemEstado(
+    @Param('ptcId') ptcId: string,
+    @Param('itemId') itemId: string,
+    @Body() updateEstadoDto: UpdatePtcItemEstadoDto,
+    @Request() req,
+  ) {
+    return this.ptcService.updatePtcItemEstado(ptcId, itemId, updateEstadoDto, req.user);
+  }
+
+  @Delete(':ptcId/items/:itemId')
+  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Eliminar un item del PTC' })
+  @ApiResponse({ status: 200, description: 'Item eliminado' })
+  deletePtcItem(@Param('ptcId') ptcId: string, @Param('itemId') itemId: string, @Request() req) {
+    return this.ptcService.deletePtcItem(ptcId, itemId, req.user);
+  }
+
+  @Post('actas/:id/upload-pdf')
+  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Subir PDF firmado del acta' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 200, description: 'PDF subido exitosamente' })
+  @UseInterceptors(FileInterceptor('file'))
+  uploadActaPdf(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @Request() req) {
+    return this.ptcService.uploadActaPdf(id, file, req.user);
   }
 }

@@ -18,6 +18,7 @@ import {
   ClipboardCheck,
   Shield,
   FilePlus,
+  Calendar,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -34,6 +35,7 @@ const menuItems = {
     { icon: ClipboardCheck, label: 'Asistencias', href: '/dashboard/asistencias' },
     { icon: Shield, label: 'Disciplinario', href: '/dashboard/disciplinario' },
     { icon: FilePlus, label: 'PTC', href: '/dashboard/ptc' },
+    { icon: Calendar, label: 'Agenda', href: '/dashboard/agenda' },
     { icon: School, label: 'Colegios', href: '/dashboard/colegios' },
     { icon: BookOpen, label: 'Programas', href: '/dashboard/programas' },
     { icon: BarChart3, label: 'Estadísticas', href: '/dashboard/stats' },
@@ -44,6 +46,7 @@ const menuItems = {
     { icon: ClipboardCheck, label: 'Asistencias', href: '/dashboard/asistencias' },
     { icon: Shield, label: 'Disciplinario', href: '/dashboard/disciplinario' },
     { icon: FilePlus, label: 'PTC', href: '/dashboard/ptc' },
+    { icon: Calendar, label: 'Agenda', href: '/dashboard/agenda' },
     { icon: GraduationCap, label: 'Mis Aprendices', href: '/dashboard/aprendices' },
   ],
   coordinador: [
@@ -53,6 +56,7 @@ const menuItems = {
     { icon: ClipboardCheck, label: 'Asistencias', href: '/dashboard/asistencias' },
     { icon: Shield, label: 'Disciplinario', href: '/dashboard/disciplinario' },
     { icon: FilePlus, label: 'PTC', href: '/dashboard/ptc' },
+    { icon: Calendar, label: 'Agenda', href: '/dashboard/agenda' },
     { icon: School, label: 'Colegios', href: '/dashboard/colegios' },
     { icon: BookOpen, label: 'Programas', href: '/dashboard/programas' },
     { icon: BarChart3, label: 'Reportes', href: '/dashboard/stats' },

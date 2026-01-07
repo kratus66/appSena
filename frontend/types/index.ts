@@ -185,3 +185,97 @@ export interface ResumenAsistencia {
     totalAusencias: number;
   }[];
 }
+
+// ========== AGENDA + NOTIFICACIONES (SPRINT 6) ==========
+
+export type EventType = 'CLASE' | 'REUNION' | 'CITACION' | 'COMPROMISO' | 'OTRO';
+export type EventStatus = 'PROGRAMADO' | 'CANCELADO' | 'COMPLETADO';
+export type EventPriority = 'BAJA' | 'MEDIA' | 'ALTA';
+export type ReminderChannel = 'IN_APP' | 'EMAIL' | 'SMS';
+export type ReminderStatus = 'PENDIENTE' | 'ENVIADO' | 'CANCELADO';
+export type NotificationType = 'RECORDATORIO' | 'EVENTO_CREADO' | 'EVENTO_CANCELADO' | 'EVENTO_ACTUALIZADO' | 'OTRO';
+
+export interface CalendarEvent {
+  id: string;
+  titulo: string;
+  descripcion?: string;
+  tipo: EventType;
+  fechaInicio: string;
+  fechaFin?: string;
+  allDay: boolean;
+  estado: EventStatus;
+  prioridad: EventPriority;
+  fichaId?: string;
+  aprendizId?: string;
+  casoDisciplinarioId?: string;
+  ptcId?: string;
+  actaId?: string;
+  createdByUserId: string;
+  assignedToId?: string;
+  ficha?: Ficha;
+  aprendiz?: Aprendiz;
+  createdByUser?: User;
+  assignedTo?: User;
+  recordatorios?: Reminder[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Reminder {
+  id: string;
+  eventId: string;
+  remindAt: string;
+  canal: ReminderChannel;
+  estado: ReminderStatus;
+  mensaje?: string;
+  sentAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  titulo: string;
+  mensaje: string;
+  tipo: NotificationType;
+  entityType?: string;
+  entityId?: string;
+  read: boolean;
+  readAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateEventDto {
+  titulo: string;
+  descripcion?: string;
+  tipo: EventType;
+  fechaInicio: string;
+  fechaFin?: string;
+  allDay?: boolean;
+  prioridad: EventPriority;
+  fichaId?: string;
+  aprendizId?: string;
+  casoDisciplinarioId?: string;
+  ptcId?: string;
+  actaId?: string;
+  assignedToId?: string;
+}
+
+export interface EventsResponse {
+  data: CalendarEvent[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface NotificationsResponse {
+  data: Notification[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  unreadCount: number;
+}

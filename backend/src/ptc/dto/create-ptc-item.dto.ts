@@ -39,6 +39,15 @@ export class CreatePtcItemDto {
   responsableNombre?: string;
 
   @ApiProperty({
+    description: 'Notas adicionales sobre el compromiso (opcional)',
+    example: 'Notas adicionales sobre el seguimiento',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  notas?: string;
+
+  @ApiProperty({
     description: 'Estado inicial (opcional, default PENDIENTE)',
     enum: PtcItemEstado,
     example: PtcItemEstado.PENDIENTE,

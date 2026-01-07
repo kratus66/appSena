@@ -15,6 +15,8 @@ import { AsistenciasModule } from './asistencias/asistencias.module';
 import { DisciplinarioModule } from './disciplinario/disciplinario.module';
 import { UploadModule } from './upload/upload.module';
 import { PtcModule } from './ptc/ptc.module';
+import { AgendaModule } from './agenda/agenda.module';
+import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { User } from './users/entities/user.entity';
 import { Colegio } from './colegios/entities/colegio.entity';
 import { Programa } from './programas/entities/programa.entity';
@@ -29,6 +31,9 @@ import { Ptc } from './ptc/entities/ptc.entity';
 import { PtcItem } from './ptc/entities/ptc-item.entity';
 import { Acta } from './ptc/entities/acta.entity';
 import { ActaAsistente } from './ptc/entities/acta-asistente.entity';
+import { CalendarEvent } from './agenda/entities/calendar-event.entity';
+import { Reminder } from './agenda/entities/reminder.entity';
+import { Notification } from './notificaciones/entities/notification.entity';
 
 @Module({
   imports: [
@@ -45,7 +50,7 @@ import { ActaAsistente } from './ptc/entities/acta-asistente.entity';
         username: configService.get('DB_USERNAME'),
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_DATABASE'),
-        entities: [User, Colegio, Programa, Ficha, Aprendiz, Acudiente, ClaseSesion, Asistencia, DisciplinaryCase, CaseAction, Ptc, PtcItem, Acta, ActaAsistente],
+        entities: [User, Colegio, Programa, Ficha, Aprendiz, Acudiente, ClaseSesion, Asistencia, DisciplinaryCase, CaseAction, Ptc, PtcItem, Acta, ActaAsistente, CalendarEvent, Reminder, Notification],
         synchronize: configService.get('NODE_ENV') === 'development',
         logging: configService.get('NODE_ENV') === 'development',
       }),
@@ -61,6 +66,8 @@ import { ActaAsistente } from './ptc/entities/acta-asistente.entity';
     AsistenciasModule,
     DisciplinarioModule,
     PtcModule,
+    AgendaModule,
+    NotificacionesModule,
     UploadModule,
     SeederModule,
   ],

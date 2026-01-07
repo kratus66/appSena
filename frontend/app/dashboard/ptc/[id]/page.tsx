@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,8 +26,10 @@ interface Ptc {
   casoDisciplinarioId?: string;
   ficha: {
     id: string;
-    numero: string;
-    nombrePrograma: string;
+    numeroFicha: string;
+    programa?: {
+      nombre: string;
+    };
   };
   aprendiz: {
     id: string;
@@ -36,8 +39,8 @@ interface Ptc {
   };
   casoDisciplinario?: {
     id: string;
-    numeroConsecutivo: string;
-    motivo: string;
+    asunto: string;
+    tipo: string;
   };
   createdAt: string;
   updatedAt: string;
@@ -107,134 +110,148 @@ export default function PtcDetailPage() {
   };
 
   const getEstadoBadge = (estado: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      BORRADOR: 'secondary',
-      VIGENTE: 'default',
-      CERRADO: 'outline',
+    const variants: any = {
+      BORRADOR: 'warning',
+      VIGENTE: 'success',
+      CERRADO: 'default',
     };
     return <Badge variant={variants[estado] || 'default'}>{estado}</Badge>;
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-green-600 border-r-transparent"></div>
+        </div>
+      </DashboardLayout>
     );
   }
 
   if (!ptc) {
-    return <div>PTC no encontrado</div>;
+    return (
+      <DashboardLayout>
+        <div className="text-center py-12">
+          <p className="text-gray-600">PTC no encontrado</p>
+        </div>
+      </DashboardLayout>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.back()}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold tracking-tight">
-                PTC - {ptc.aprendiz.nombres} {ptc.aprendiz.apellidos}
-              </h1>
-              {getEstadoBadge(ptc.estado)}
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.back()}
+              className="h-10 w-10"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-bold text-gray-950">
+                  PTC - {ptc.aprendiz.nombres} {ptc.aprendiz.apellidos}
+                </h1>
+                {getEstadoBadge(ptc.estado)}
+              </div>
+              <p className="text-gray-600 mt-1 font-medium">
+                Ficha {ptc.ficha.numeroFicha} • {ptc.aprendiz.documento}
+              </p>
             </div>
-            <p className="text-muted-foreground mt-1">
-              Ficha {ptc.ficha.numero} • {ptc.aprendiz.documento}
-            </p>
+          </div>
+
+          <div className="flex gap-2">
+            {ptc.estado === 'BORRADOR' && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/dashboard/ptc/${ptcId}/edit`)}
+                  disabled={updating}
+                  className="border-gray-300"
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Editar
+                </Button>
+                <Button
+                  onClick={() => handleChangeEstado('VIGENTE')}
+                  disabled={updating}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Activar PTC
+                </Button>
+              </>
+            )}
+
+            {ptc.estado === 'VIGENTE' && (
+              <Button
+                variant="outline"
+                onClick={() => handleChangeEstado('CERRADO')}
+                disabled={updating}
+                className="border-gray-300"
+              >
+                <Lock className="mr-2 h-4 w-4" />
+                Cerrar PTC
+              </Button>
+            )}
+
+            {ptc.estado === 'BORRADOR' && (
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={updating}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar
+              </Button>
+            )}
           </div>
         </div>
 
-        <div className="flex gap-2">
-          {ptc.estado === 'BORRADOR' && (
-            <>
-              <Button
-                variant="outline"
-                onClick={() => router.push(`/dashboard/ptc/${ptcId}/edit`)}
-                disabled={updating}
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                Editar
-              </Button>
-              <Button
-                onClick={() => handleChangeEstado('VIGENTE')}
-                disabled={updating}
-              >
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Activar PTC
-              </Button>
-            </>
-          )}
+        {/* Caso Disciplinario Alert */}
+        {ptc.casoDisciplinario && (
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-blue-600" />
+                <CardTitle className="text-sm text-gray-900">Vinculado a Caso Disciplinario</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="text-sm text-gray-700">
+              <p>
+                <span className="font-semibold">{ptc.casoDisciplinario.tipo}:</span>{' '}
+                {ptc.casoDisciplinario.asunto}
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
-          {ptc.estado === 'VIGENTE' && (
-            <Button
-              variant="secondary"
-              onClick={() => handleChangeEstado('CERRADO')}
-              disabled={updating}
-            >
-              <Lock className="mr-2 h-4 w-4" />
-              Cerrar PTC
-            </Button>
-          )}
+        {/* Tabs */}
+        <Tabs defaultValue="info" className="w-full">
+          <TabsList className="bg-gray-100">
+            <TabsTrigger value="info" className="data-[state=active]:bg-white data-[state=active]:text-gray-900 text-gray-700">Información</TabsTrigger>
+            <TabsTrigger value="items" className="data-[state=active]:bg-white data-[state=active]:text-gray-900 text-gray-700">Compromisos</TabsTrigger>
+            <TabsTrigger value="actas" className="data-[state=active]:bg-white data-[state=active]:text-gray-900 text-gray-700">Actas</TabsTrigger>
+          </TabsList>
 
-          {ptc.estado === 'BORRADOR' && (
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={updating}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </Button>
-          )}
-        </div>
+          <TabsContent value="info">
+            <PtcInfoTab ptc={ptc} onUpdate={fetchPtc} />
+          </TabsContent>
+
+          <TabsContent value="items">
+            <PtcItemsTab ptcId={ptcId} ptcEstado={ptc.estado} />
+          </TabsContent>
+
+          <TabsContent value="actas">
+            <PtcActasTab ptcId={ptcId} fichaId={ptc.fichaId} aprendizId={ptc.aprendizId} />
+          </TabsContent>
+        </Tabs>
       </div>
-
-      {/* Caso Disciplinario Alert */}
-      {ptc.casoDisciplinario && (
-        <Card className="bg-blue-50 border-blue-200">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-blue-600" />
-              <CardTitle className="text-sm">Vinculado a Caso Disciplinario</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="text-sm">
-            <p>
-              <span className="font-semibold">Caso #{ptc.casoDisciplinario.numeroConsecutivo}:</span>{' '}
-              {ptc.casoDisciplinario.motivo}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Tabs */}
-      <Tabs defaultValue="info" className="w-full">
-        <TabsList>
-          <TabsTrigger value="info">Información</TabsTrigger>
-          <TabsTrigger value="items">Compromisos</TabsTrigger>
-          <TabsTrigger value="actas">Actas</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="info">
-          <PtcInfoTab ptc={ptc} onUpdate={fetchPtc} />
-        </TabsContent>
-
-        <TabsContent value="items">
-          <PtcItemsTab ptcId={ptcId} ptcEstado={ptc.estado} />
-        </TabsContent>
-
-        <TabsContent value="actas">
-          <PtcActasTab ptcId={ptcId} />
-        </TabsContent>
-      </Tabs>
-    </div>
+    </DashboardLayout>
   );
 }

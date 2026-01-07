@@ -217,21 +217,21 @@ export default function DashboardPage() {
             <div className="grid gap-4 md:grid-cols-3">
               <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
                 <div>
-                  <p className="text-sm text-gray-600">Aprendices Activos</p>
+                  <p className="text-sm text-gray-800 font-semibold">Aprendices Activos</p>
                   <p className="text-2xl font-bold text-green-600">{stats.aprendicesActivos}</p>
                 </div>
                 <Badge variant="success">Activos</Badge>
               </div>
               <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
                 <div>
-                  <p className="text-sm text-gray-600">Fichas en Curso</p>
+                  <p className="text-sm text-gray-800 font-semibold">Fichas en Curso</p>
                   <p className="text-2xl font-bold text-blue-600">{stats.fichasActivas}</p>
                 </div>
                 <Badge variant="info">En Curso</Badge>
               </div>
               <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
                 <div>
-                  <p className="text-sm text-gray-600">Colegios Activos</p>
+                  <p className="text-sm text-gray-800 font-semibold">Colegios Activos</p>
                   <p className="text-2xl font-bold text-purple-600">{stats.totalColegios}</p>
                 </div>
                 <Badge variant="default">Total</Badge>

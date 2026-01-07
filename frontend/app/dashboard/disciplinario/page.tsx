@@ -159,7 +159,7 @@ export default function DisciplinarioPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Casos</p>
+                  <p className="text-sm font-medium text-gray-800 font-semibold">Total Casos</p>
                   <p className="text-2xl font-bold text-gray-900">{total}</p>
                 </div>
                 <FileText className="h-8 w-8 text-blue-600" />
@@ -171,7 +171,7 @@ export default function DisciplinarioPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Casos Abiertos</p>
+                  <p className="text-sm font-medium text-gray-800 font-semibold">Casos Abiertos</p>
                   <p className="text-2xl font-bold text-blue-600">
                     {casos.filter(c => c.estado === 'ABIERTO').length}
                   </p>
@@ -185,7 +185,7 @@ export default function DisciplinarioPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">En Seguimiento</p>
+                  <p className="text-sm font-medium text-gray-800 font-semibold">En Seguimiento</p>
                   <p className="text-2xl font-bold text-purple-600">
                     {casos.filter(c => c.estado === 'SEGUIMIENTO').length}
                   </p>
@@ -199,7 +199,7 @@ export default function DisciplinarioPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Cerrados</p>
+                  <p className="text-sm font-medium text-gray-800 font-semibold">Cerrados</p>
                   <p className="text-2xl font-bold text-green-600">
                     {casos.filter(c => c.estado === 'CERRADO').length}
                   </p>

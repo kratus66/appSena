@@ -21,6 +21,7 @@ import { User, UserRole } from '../users/entities/user.entity';
 import { FichasService } from '../fichas/fichas.service';
 import { AprendicesService } from '../aprendices/aprendices.service';
 import { DisciplinarioService } from '../disciplinario/disciplinario.service';
+import { UploadService } from '../upload/upload.service';
 
 @Injectable()
 export class PtcService {
@@ -36,6 +37,7 @@ export class PtcService {
     private fichasService: FichasService,
     private aprendicesService: AprendicesService,
     private disciplinarioService: DisciplinarioService,
+    private uploadService: UploadService,
   ) {}
 
   // ==================== PTC CRUD ====================
@@ -122,21 +124,23 @@ export class PtcService {
     const qb = this.ptcRepository
       .createQueryBuilder('ptc')
       .leftJoinAndSelect('ptc.ficha', 'ficha')
+      .leftJoinAndSelect('ficha.programa', 'programa')
       .leftJoinAndSelect('ptc.aprendiz', 'aprendiz')
       .leftJoinAndSelect('ptc.casoDisciplinario', 'caso')
       .leftJoinAndSelect('ptc.createdBy', 'createdBy')
       .select([
         'ptc',
         'ficha.id',
-        'ficha.numero',
-        'ficha.nombrePrograma',
+        'ficha.numeroFicha',
+        'programa.id',
+        'programa.nombre',
         'aprendiz.id',
         'aprendiz.nombres',
         'aprendiz.apellidos',
         'aprendiz.documento',
         'caso.id',
-        'caso.numeroConsecutivo',
-        'caso.motivo',
+        'caso.asunto',
+        'caso.tipo',
         'createdBy.id',
         'createdBy.nombre',
         'createdBy.email',
@@ -247,6 +251,15 @@ export class PtcService {
 
   // ==================== PTC ITEMS CRUD ====================
 
+  async getPtcItems(ptcId: string, user: User): Promise<PtcItem[]> {
+    await this.findOnePtc(ptcId, user); // Verificar acceso al PTC
+
+    return this.ptcItemRepository.find({
+      where: { ptcId },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
   async addItemToPtc(ptcId: string, createItemDto: CreatePtcItemDto, user: User): Promise<PtcItem> {
     const ptc = await this.findOnePtc(ptcId, user);
 
@@ -354,6 +367,7 @@ export class PtcService {
     const qb = this.actaRepository
       .createQueryBuilder('acta')
       .leftJoinAndSelect('acta.ficha', 'ficha')
+      .leftJoinAndSelect('ficha.programa', 'programa')
       .leftJoinAndSelect('acta.aprendiz', 'aprendiz')
       .leftJoinAndSelect('acta.ptc', 'ptc')
       .leftJoinAndSelect('acta.casoDisciplinario', 'caso')
@@ -362,15 +376,17 @@ export class PtcService {
       .select([
         'acta',
         'ficha.id',
-        'ficha.numero',
-        'ficha.nombrePrograma',
+        'ficha.numeroFicha',
+        'programa.id',
+        'programa.nombre',
         'aprendiz.id',
         'aprendiz.nombres',
         'aprendiz.apellidos',
         'ptc.id',
         'ptc.motivo',
         'caso.id',
-        'caso.motivo',
+        'caso.asunto',
+        'caso.tipo',
         'createdBy.id',
         'createdBy.nombre',
         'asistentes',
@@ -490,6 +506,33 @@ export class PtcService {
     }
 
     await this.actaRepository.softDelete(id);
+  }
+
+  async uploadActaPdf(id: string, file: Express.Multer.File, user: User): Promise<Acta> {
+    const acta = await this.findOneActa(id, user);
+
+    // Validar que el acta esté en estado FIRMABLE o CERRADA
+    if (acta.estado === 'BORRADOR') {
+      throw new BadRequestException('El acta debe estar en estado FIRMABLE o CERRADA para subir el PDF firmado');
+    }
+
+    // Validar que sea un PDF
+    if (file.mimetype !== 'application/pdf') {
+      throw new BadRequestException('Solo se permiten archivos PDF');
+    }
+
+    // Subir el archivo a S3 o almacenamiento local
+    const uploadResult = await this.uploadService.uploadFile(file, 'actas-ptc');
+
+    // Actualizar el acta con la URL del PDF
+    acta.pdfUrl = uploadResult.url;
+    
+    // Generar hash del archivo para integridad
+    const crypto = require('crypto');
+    const hash = crypto.createHash('sha256').update(file.buffer).digest('hex');
+    acta.hash = `sha256:${hash}`;
+
+    return this.actaRepository.save(acta);
   }
 
   // ==================== HELPERS ====================

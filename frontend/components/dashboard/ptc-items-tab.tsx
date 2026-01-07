@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { PlusCircle, Edit, Trash2, CheckCircle, XCircle, Clock, FileText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -166,8 +167,9 @@ export default function PtcItemsTab({ ptcId, ptcEstado }: PtcItemsTabProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {canEdit && (
+    <TooltipProvider>
+      <div className="space-y-4">
+        {canEdit && (
         <div className="flex justify-end">
           <Dialog open={dialogOpen} onOpenChange={(open) => {
             setDialogOpen(open);
@@ -179,21 +181,21 @@ export default function PtcItemsTab({ ptcId, ptcEstado }: PtcItemsTabProps) {
                 Agregar Compromiso
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl bg-white">
               <DialogHeader>
-                <DialogTitle>
+                <DialogTitle className="text-gray-900">
                   {editingItem ? 'Editar Compromiso' : 'Nuevo Compromiso'}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Tipo de Compromiso *</Label>
+                    <Label className="text-gray-700">Tipo de Compromiso *</Label>
                     <Select
                       value={formData.tipo}
                       onValueChange={(value) => setFormData({ ...formData, tipo: value })}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -206,52 +208,56 @@ export default function PtcItemsTab({ ptcId, ptcEstado }: PtcItemsTabProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Fecha de Compromiso *</Label>
+                    <Label className="text-gray-700">Fecha de Compromiso *</Label>
                     <Input
                       type="date"
                       value={formData.fechaCompromiso}
                       onChange={(e) => setFormData({ ...formData, fechaCompromiso: e.target.value })}
+                      className="bg-gray-50 border-gray-300 text-gray-900"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Responsable *</Label>
+                  <Label className="text-gray-700">Responsable *</Label>
                   <Input
                     value={formData.responsableNombre}
                     onChange={(e) => setFormData({ ...formData, responsableNombre: e.target.value })}
                     placeholder="Nombre del responsable"
+                    className="bg-gray-50 border-gray-300 text-gray-900"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Descripción *</Label>
+                  <Label className="text-gray-700">Descripción *</Label>
                   <Textarea
                     value={formData.descripcion}
                     onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                     placeholder="Descripción del compromiso..."
                     rows={3}
+                    className="bg-gray-50 border-gray-300 text-gray-900"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Notas Adicionales</Label>
+                  <Label className="text-gray-700">Notas Adicionales</Label>
                   <Textarea
                     value={formData.notas}
                     onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
                     placeholder="Notas opcionales..."
                     rows={2}
+                    className="bg-gray-50 border-gray-300 text-gray-900"
                   />
                 </div>
 
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="border-gray-300">
                     Cancelar
                   </Button>
-                  <Button type="submit">
+                  <Button type="submit" className="bg-green-600 hover:bg-green-700">
                     {editingItem ? 'Actualizar' : 'Crear'}
                   </Button>
                 </div>
@@ -262,76 +268,108 @@ export default function PtcItemsTab({ ptcId, ptcEstado }: PtcItemsTabProps) {
       )}
 
       {items.length === 0 ? (
-        <Card>
+        <Card className="border-gray-200">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No hay compromisos registrados</p>
+            <FileText className="h-12 w-12 text-gray-400 mb-4" />
+            <p className="text-gray-600 font-medium">No hay compromisos registrados</p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
           {items.map((item) => (
-            <Card key={item.id}>
-              <CardHeader className="pb-3">
+            <Card key={item.id} className="border-gray-200">
+              <CardHeader className="pb-3 bg-gray-50 border-b border-gray-200">
                 <div className="flex items-start justify-between">
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex-1">
                     <div className="flex items-center gap-2">
                       {getTipoBadge(item.tipo)}
                       {getEstadoBadge(item.estado)}
                     </div>
-                    <CardTitle className="text-base">{item.descripcion}</CardTitle>
+                    <CardTitle className="text-base text-gray-900">{item.descripcion}</CardTitle>
                   </div>
                   {canEdit && (
-                    <div className="flex gap-2">
+                    <div className="flex gap-1">
                       {item.estado === 'PENDIENTE' && (
                         <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleChangeEstado(item.id, 'CUMPLIDO')}
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleChangeEstado(item.id, 'INCUMPLIDO')}
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleChangeEstado(item.id, 'CUMPLIDO')}
+                                className="border-gray-300 hover:bg-green-50 hover:border-green-500 hover:text-green-700"
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Marcar como Cumplido</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleChangeEstado(item.id, 'INCUMPLIDO')}
+                                className="border-gray-300 hover:bg-red-50 hover:border-red-500 hover:text-red-700"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Marcar como Incumplido</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </>
                       )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openEditDialog(item)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleDelete(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditDialog(item)}
+                            className="border-gray-300 hover:bg-blue-50 hover:border-blue-500 hover:text-blue-700"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Editar</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDelete(item.id)}
+                            className="hover:bg-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Eliminar</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   )}
                 </div>
               </CardHeader>
-              <CardContent className="pt-0">
-                <div className="grid gap-2 text-sm">
+              <CardContent className="pt-4">
+                <div className="grid gap-2 text-sm text-gray-700">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">Responsable:</span>
+                    <span className="font-semibold text-gray-900">Responsable:</span>
                     <span>{item.responsableNombre}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">Fecha:</span>
+                    <span className="font-semibold text-gray-900">Fecha:</span>
                     <span>{format(new Date(item.fechaCompromiso), "d 'de' MMMM, yyyy", { locale: es })}</span>
                   </div>
                   {item.notas && (
-                    <div className="mt-2 p-2 bg-muted rounded text-xs">
-                      <span className="font-medium">Notas:</span> {item.notas}
+                    <div className="mt-2 p-3 bg-gray-100 rounded text-sm text-gray-800">
+                      <span className="font-semibold text-gray-900">Notas:</span> {item.notas}
                     </div>
                   )}
                 </div>
@@ -341,5 +379,6 @@ export default function PtcItemsTab({ ptcId, ptcEstado }: PtcItemsTabProps) {
         </div>
       )}
     </div>
+    </TooltipProvider>
   );
 }

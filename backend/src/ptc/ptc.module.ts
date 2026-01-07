@@ -9,6 +9,7 @@ import { ActaAsistente } from './entities/acta-asistente.entity';
 import { FichasModule } from '../fichas/fichas.module';
 import { AprendicesModule } from '../aprendices/aprendices.module';
 import { DisciplinarioModule } from '../disciplinario/disciplinario.module';
+import { UploadModule } from '../upload/upload.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { DisciplinarioModule } from '../disciplinario/disciplinario.module';
     FichasModule,
     AprendicesModule,
     DisciplinarioModule,
+    UploadModule,
   ],
   controllers: [PtcController],
   providers: [PtcService],

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import {
   Plus,
   Search,
@@ -16,6 +17,7 @@ import {
   Download,
   GraduationCap,
   AlertCircle,
+  X,
 } from 'lucide-react';
 import api from '@/lib/api';
 import { Aprendiz } from '@/types';
@@ -32,10 +34,50 @@ export default function AprendicesPage() {
   const [isViewModalOpen, setIsViewModalOpen] = React.useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+  const [editFormData, setEditFormData] = React.useState({
+    nombres: '',
+    apellidos: '',
+    tipoDocumento: 'CC',
+    documento: '',
+    email: '',
+    telefono: '',
+    direccion: '',
+    estadoAcademico: 'ACTIVO',
+  });
+  const [createFormData, setCreateFormData] = React.useState({
+    nombres: '',
+    apellidos: '',
+    tipoDocumento: 'CC',
+    documento: '',
+    email: '',
+    telefono: '',
+    direccion: '',
+    estadoAcademico: 'ACTIVO',
+    fichaId: '',
+    password: '',
+  });
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [fichas, setFichas] = React.useState<any[]>([]);
 
   React.useEffect(() => {
     fetchAprendices();
   }, [currentPage, searchTerm]);
+
+  React.useEffect(() => {
+    if (isCreateModalOpen) {
+      fetchFichas();
+    }
+  }, [isCreateModalOpen]);
+
+  const fetchFichas = async () => {
+    try {
+      const response = await api.get('/fichas?limit=100');
+      setFichas(response.data.data || []);
+    } catch (error) {
+      console.error('Error fetching fichas:', error);
+    }
+  };
 
   const fetchAprendices = async () => {
     try {
@@ -68,7 +110,38 @@ export default function AprendicesPage() {
 
   const handleEditAprendiz = (aprendiz: Aprendiz) => {
     setSelectedAprendiz(aprendiz);
+    setEditFormData({
+      nombres: aprendiz.nombres,
+      apellidos: aprendiz.apellidos,
+      tipoDocumento: aprendiz.tipoDocumento,
+      documento: aprendiz.documento,
+      email: aprendiz.email || '',
+      telefono: aprendiz.telefono || '',
+      direccion: aprendiz.direccion || '',
+      estadoAcademico: aprendiz.estadoAcademico,
+    });
     setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedAprendiz) return;
+    
+    try {
+      setIsSaving(true);
+      // No enviar documento ni tipoDocumento (campos no editables)
+      const { documento, tipoDocumento, ...dataToUpdate } = editFormData;
+      await api.patch(`/aprendices/${selectedAprendiz.id}`, dataToUpdate);
+      alert('✅ Aprendiz actualizado exitosamente');
+      setIsEditModalOpen(false);
+      setSelectedAprendiz(null);
+      fetchAprendices();
+    } catch (error: any) {
+      console.error('Error updating aprendiz:', error);
+      const mensaje = error.response?.data?.message || 'Error al actualizar el aprendiz';
+      alert('❌ Error: ' + mensaje);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDeleteAprendiz = (aprendiz: Aprendiz) => {
@@ -80,12 +153,137 @@ export default function AprendicesPage() {
     if (!selectedAprendiz) return;
     try {
       await api.delete(`/aprendices/${selectedAprendiz.id}`);
+      alert('✅ Aprendiz eliminado exitosamente');
       setIsDeleteModalOpen(false);
       setSelectedAprendiz(null);
       fetchAprendices();
     } catch (error: any) {
       console.error('Error deleting aprendiz:', error);
-      alert(error.response?.data?.message || 'Error al eliminar el aprendiz');
+      const mensaje = error.response?.data?.message || 'Error al eliminar el aprendiz';
+      alert('❌ Error: ' + mensaje);
+    }
+  };
+
+  const handleExportToCSV = () => {
+    try {
+      // Preparar los datos para exportar
+      const dataToExport = filteredAprendices.map((aprendiz) => ({
+        'Nombres': aprendiz.nombres,
+        'Apellidos': aprendiz.apellidos,
+        'Tipo Documento': aprendiz.tipoDocumento,
+        'Documento': aprendiz.documento,
+        'Email': aprendiz.email || '',
+        'Teléfono': aprendiz.telefono || '',
+        'Dirección': aprendiz.direccion || '',
+        'Estado Académico': aprendiz.estadoAcademico,
+        'Ficha': aprendiz.ficha?.numeroFicha || 'N/A',
+        'Fecha Creación': aprendiz.createdAt ? new Date(aprendiz.createdAt).toLocaleDateString('es-CO') : 'N/A',
+      }));
+
+      // Convertir a CSV
+      const headers = Object.keys(dataToExport[0]);
+      const csvContent = [
+        headers.join(','),
+        ...dataToExport.map(row => 
+          headers.map(header => {
+            const value = row[header as keyof typeof row];
+            // Escapar valores que contengan comas o comillas
+            return typeof value === 'string' && (value.includes(',') || value.includes('"'))
+              ? `"${value.replace(/"/g, '""')}"`
+              : value;
+          }).join(',')
+        )
+      ].join('\n');
+
+      // Crear y descargar el archivo
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `aprendices_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      alert('✅ Datos exportados exitosamente');
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      alert('❌ Error al exportar los datos');
+    }
+  };
+
+  const handleCreateAprendiz = async () => {
+    try {
+      setIsSaving(true);
+
+      // Validar que todos los campos requeridos estén llenos
+      if (!createFormData.password || createFormData.password.length < 6) {
+        alert('❌ La contraseña debe tener al menos 6 caracteres');
+        setIsSaving(false);
+        return;
+      }
+
+      if (!createFormData.email) {
+        alert('❌ El email es requerido');
+        setIsSaving(false);
+        return;
+      }
+
+      // Paso 1: Crear el usuario primero
+      const userPayload = {
+        nombre: `${createFormData.nombres} ${createFormData.apellidos}`,
+        email: createFormData.email,
+        password: createFormData.password,
+        documento: createFormData.documento,
+        telefono: createFormData.telefono || '',
+        rol: 'aprendiz',
+      };
+
+      const userResponse = await api.post('/users', userPayload);
+      const userId = userResponse.data.id;
+
+      // Paso 2: Crear el aprendiz con el userId obtenido
+      const aprendizPayload = {
+        nombres: createFormData.nombres,
+        apellidos: createFormData.apellidos,
+        tipoDocumento: createFormData.tipoDocumento,
+        documento: createFormData.documento,
+        email: createFormData.email,
+        telefono: createFormData.telefono,
+        direccion: createFormData.direccion,
+        estadoAcademico: createFormData.estadoAcademico,
+        userId: userId,
+        fichaId: createFormData.fichaId,
+      };
+
+      await api.post('/aprendices', aprendizPayload);
+      
+      alert('✅ Aprendiz creado exitosamente');
+      setIsCreateModalOpen(false);
+      setCreateFormData({
+        nombres: '',
+        apellidos: '',
+        tipoDocumento: 'CC',
+        documento: '',
+        email: '',
+        telefono: '',
+        direccion: '',
+        estadoAcademico: 'ACTIVO',
+        fichaId: '',
+        password: '',
+      });
+      fetchAprendices();
+    } catch (error: any) {
+      console.error('Error creating aprendiz:', error);
+      const mensaje = error.response?.data?.message;
+      if (Array.isArray(mensaje)) {
+        alert('❌ Error: ' + mensaje.join(', '));
+      } else {
+        alert('❌ Error: ' + (mensaje || 'Error al crear el aprendiz'));
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -108,7 +306,7 @@ export default function AprendicesPage() {
             <h1 className="text-3xl font-bold text-gray-950">Aprendices</h1>
             <p className="text-gray-600 mt-1 font-medium">Gestiona los aprendices del sistema</p>
           </div>
-          <Button className="flex items-center space-x-2">
+          <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center space-x-2">
             <Plus size={20} />
             <span>Nuevo Aprendiz</span>
           </Button>
@@ -227,18 +425,368 @@ export default function AprendicesPage() {
           </div>
         )}
 
-        {/* Edit Modal - Placeholder */}
-        {isEditModalOpen && selectedAprendiz && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <Card className="w-full max-w-md">
-              <CardHeader>
-                <CardTitle className="text-gray-950 font-bold">Editar Aprendiz</CardTitle>
+        {/* Create Modal */}
+        {isCreateModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <Card className="w-full max-w-2xl my-8 bg-white">
+              <CardHeader className="border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl font-bold text-gray-900">Nuevo Aprendiz</CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => { 
+                      setIsCreateModalOpen(false);
+                      setCreateFormData({
+                        nombres: '',
+                        apellidos: '',
+                        tipoDocumento: 'CC',
+                        documento: '',
+                        email: '',
+                        telefono: '',
+                        direccion: '',
+                        estadoAcademico: 'ACTIVO',
+                        fichaId: '',
+                        password: '',
+                      });
+                    }}
+                    className="h-8 w-8 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 mb-4">Funcionalidad de edición próximamente.</p>
-                <Button onClick={() => { setIsEditModalOpen(false); setSelectedAprendiz(null); }} className="w-full">
-                  Cerrar
-                </Button>
+              <CardContent className="pt-6">
+                <form onSubmit={(e) => { e.preventDefault(); handleCreateAprendiz(); }} className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {/* Nombres */}
+                    <div>
+                      <Label htmlFor="create-nombres" className="text-gray-700 font-semibold">Nombres *</Label>
+                      <Input
+                        id="create-nombres"
+                        value={createFormData.nombres}
+                        onChange={(e) => setCreateFormData({ ...createFormData, nombres: e.target.value })}
+                        required
+                        className="mt-1"
+                      />
+                    </div>
+
+                    {/* Apellidos */}
+                    <div>
+                      <Label htmlFor="create-apellidos" className="text-gray-700 font-semibold">Apellidos *</Label>
+                      <Input
+                        id="create-apellidos"
+                        value={createFormData.apellidos}
+                        onChange={(e) => setCreateFormData({ ...createFormData, apellidos: e.target.value })}
+                        required
+                        className="mt-1"
+                      />
+                    </div>
+
+                    {/* Tipo Documento */}
+                    <div>
+                      <Label htmlFor="create-tipoDocumento" className="text-gray-700 font-semibold">Tipo Documento *</Label>
+                      <select
+                        id="create-tipoDocumento"
+                        value={createFormData.tipoDocumento}
+                        onChange={(e) => setCreateFormData({ ...createFormData, tipoDocumento: e.target.value })}
+                        className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                        required
+                      >
+                        <option value="CC">Cédula de Ciudadanía</option>
+                        <option value="TI">Tarjeta de Identidad</option>
+                        <option value="CE">Cédula de Extranjería</option>
+                        <option value="PP">Pasaporte</option>
+                      </select>
+                    </div>
+
+                    {/* Documento */}
+                    <div>
+                      <Label htmlFor="create-documento" className="text-gray-700 font-semibold">Documento *</Label>
+                      <Input
+                        id="create-documento"
+                        value={createFormData.documento}
+                        onChange={(e) => setCreateFormData({ ...createFormData, documento: e.target.value })}
+                        required
+                        className="mt-1"
+                      />
+                    </div>
+
+                    {/* Email */}
+                    <div>
+                      <Label htmlFor="create-email" className="text-gray-700 font-semibold">Email *</Label>
+                      <Input
+                        id="create-email"
+                        type="email"
+                        value={createFormData.email}
+                        onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
+                        required
+                        className="mt-1"
+                      />
+                    </div>
+
+                    {/* Teléfono */}
+                    <div>
+                      <Label htmlFor="create-telefono" className="text-gray-700 font-semibold">Teléfono</Label>
+                      <Input
+                        id="create-telefono"
+                        value={createFormData.telefono}
+                        onChange={(e) => setCreateFormData({ ...createFormData, telefono: e.target.value })}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    {/* Contraseña Inicial */}
+                    <div className="md:col-span-2">
+                      <Label htmlFor="create-password" className="text-gray-700 font-semibold">Contraseña Inicial *</Label>
+                      <Input
+                        id="create-password"
+                        type="password"
+                        value={createFormData.password}
+                        onChange={(e) => setCreateFormData({ ...createFormData, password: e.target.value })}
+                        required
+                        minLength={6}
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">• La contraseña debe tener al menos 6 caracteres</p>
+                      <p className="text-xs text-gray-500">• El usuario recibirá sus credenciales por email</p>
+                      <p className="text-xs text-gray-500">• Podrá cambiar su contraseña después del primer login</p>
+                    </div>
+
+                    {/* Dirección */}
+                    <div className="md:col-span-2">
+                      <Label htmlFor="create-direccion" className="text-gray-700 font-semibold">Dirección</Label>
+                      <Input
+                        id="create-direccion"
+                        value={createFormData.direccion}
+                        onChange={(e) => setCreateFormData({ ...createFormData, direccion: e.target.value })}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    {/* Estado Académico */}
+                    <div>
+                      <Label htmlFor="create-estadoAcademico" className="text-gray-700 font-semibold">Estado Académico *</Label>
+                      <select
+                        id="create-estadoAcademico"
+                        value={createFormData.estadoAcademico}
+                        onChange={(e) => setCreateFormData({ ...createFormData, estadoAcademico: e.target.value })}
+                        className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                        required
+                      >
+                        <option value="ACTIVO">Activo</option>
+                        <option value="SUSPENDIDO">Suspendido</option>
+                        <option value="RETIRADO">Retirado</option>
+                      </select>
+                    </div>
+
+                    {/* Ficha */}
+                    <div>
+                      <Label htmlFor="create-fichaId" className="text-gray-700 font-semibold">Ficha *</Label>
+                      <select
+                        id="create-fichaId"
+                        value={createFormData.fichaId}
+                        onChange={(e) => setCreateFormData({ ...createFormData, fichaId: e.target.value })}
+                        className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                        required
+                      >
+                        <option value="">Seleccionar ficha</option>
+                        {fichas.map((ficha: any) => (
+                          <option key={ficha.id} value={ficha.id}>
+                            {ficha.numeroFicha} - {ficha.programa?.nombre || 'Sin programa'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t flex space-x-3 mt-6">
+                    <Button 
+                      type="button"
+                      variant="outline" 
+                      onClick={() => { 
+                        setIsCreateModalOpen(false);
+                        setCreateFormData({
+                          nombres: '',
+                          apellidos: '',
+                          tipoDocumento: 'CC',
+                          documento: '',
+                          email: '',
+                          telefono: '',
+                          direccion: '',
+                          estadoAcademico: 'ACTIVO',
+                          fichaId: '',
+                          password: '',
+                        });
+                      }}
+                      className="flex-1"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={isSaving}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      {isSaving ? 'Guardando...' : 'Crear Aprendiz'}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Edit Modal */}
+        {isEditModalOpen && selectedAprendiz && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <Card className="w-full max-w-2xl my-8 bg-white">
+              <CardHeader className="border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl font-bold text-gray-900">Editar Aprendiz</CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => { setIsEditModalOpen(false); setSelectedAprendiz(null); }}
+                    className="h-8 w-8 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <form onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }} className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {/* Nombres */}
+                    <div>
+                      <Label htmlFor="edit-nombres" className="text-gray-700 font-semibold">Nombres *</Label>
+                      <Input
+                        id="edit-nombres"
+                        value={editFormData.nombres}
+                        onChange={(e) => setEditFormData({ ...editFormData, nombres: e.target.value })}
+                        required
+                        className="mt-1"
+                      />
+                    </div>
+
+                    {/* Apellidos */}
+                    <div>
+                      <Label htmlFor="edit-apellidos" className="text-gray-700 font-semibold">Apellidos *</Label>
+                      <Input
+                        id="edit-apellidos"
+                        value={editFormData.apellidos}
+                        onChange={(e) => setEditFormData({ ...editFormData, apellidos: e.target.value })}
+                        required
+                        className="mt-1"
+                      />
+                    </div>
+
+                    {/* Tipo Documento */}
+                    <div>
+                      <Label htmlFor="edit-tipoDocumento" className="text-gray-700 font-semibold">
+                        Tipo Documento * 
+                        <span className="text-xs text-gray-500 ml-2">(No editable)</span>
+                      </Label>
+                      <select
+                        id="edit-tipoDocumento"
+                        value={editFormData.tipoDocumento}
+                        disabled
+                        className="mt-1 flex h-10 w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-600 cursor-not-allowed"
+                        required
+                      >
+                        <option value="CC">Cédula de Ciudadanía</option>
+                        <option value="TI">Tarjeta de Identidad</option>
+                        <option value="CE">Cédula de Extranjería</option>
+                        <option value="PAS">Pasaporte</option>
+                      </select>
+                    </div>
+
+                    {/* Documento */}
+                    <div>
+                      <Label htmlFor="edit-documento" className="text-gray-700 font-semibold">
+                        Documento * 
+                        <span className="text-xs text-gray-500 ml-2">(No editable)</span>
+                      </Label>
+                      <Input
+                        id="edit-documento"
+                        value={editFormData.documento}
+                        disabled
+                        className="mt-1 bg-gray-100 cursor-not-allowed"
+                      />
+                    </div>
+
+                    {/* Email */}
+                    <div>
+                      <Label htmlFor="edit-email" className="text-gray-700 font-semibold">Email</Label>
+                      <Input
+                        id="edit-email"
+                        type="email"
+                        value={editFormData.email}
+                        onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    {/* Teléfono */}
+                    <div>
+                      <Label htmlFor="edit-telefono" className="text-gray-700 font-semibold">Teléfono</Label>
+                      <Input
+                        id="edit-telefono"
+                        value={editFormData.telefono}
+                        onChange={(e) => setEditFormData({ ...editFormData, telefono: e.target.value })}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    {/* Dirección */}
+                    <div className="md:col-span-2">
+                      <Label htmlFor="edit-direccion" className="text-gray-700 font-semibold">Dirección</Label>
+                      <Input
+                        id="edit-direccion"
+                        value={editFormData.direccion}
+                        onChange={(e) => setEditFormData({ ...editFormData, direccion: e.target.value })}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    {/* Estado Académico */}
+                    <div className="md:col-span-2">
+                      <Label htmlFor="edit-estadoAcademico" className="text-gray-700 font-semibold">Estado Académico *</Label>
+                      <select
+                        id="edit-estadoAcademico"
+                        value={editFormData.estadoAcademico}
+                        onChange={(e) => setEditFormData({ ...editFormData, estadoAcademico: e.target.value as any })}
+                        className="mt-1 flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 ring-offset-white focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2"
+                        required
+                      >
+                        <option value="ACTIVO">Activo</option>
+                        <option value="SUSPENDIDO">Suspendido</option>
+                        <option value="RETIRADO">Retirado</option>
+                        <option value="DESERTOR">Desertor</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Buttons */}
+                  <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => { setIsEditModalOpen(false); setSelectedAprendiz(null); }}
+                      disabled={isSaving}
+                      className="px-6"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isSaving}
+                      className="bg-green-600 hover:bg-green-700 px-6"
+                    >
+                      {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                    </Button>
+                  </div>
+                </form>
               </CardContent>
             </Card>
           </div>
@@ -302,7 +850,7 @@ export default function AprendicesPage() {
                 </div>
               </div>
               <select
-                className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600"
+                className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 text-gray-900 font-medium"
                 value={estadoFilter}
                 onChange={(e) => setEstadoFilter(e.target.value)}
               >
@@ -310,13 +858,17 @@ export default function AprendicesPage() {
                 <option value="ACTIVO">Activo</option>
                 <option value="SUSPENDIDO">Suspendido</option>
                 <option value="RETIRADO">Retirado</option>
-                <option value="DESERTOR">Desertor</option>
               </select>
               <Button variant="outline" className="flex items-center space-x-2">
                 <Filter size={20} />
                 <span>Más Filtros</span>
               </Button>
-              <Button variant="outline" className="flex items-center space-x-2">
+              <Button 
+                variant="outline" 
+                className="flex items-center space-x-2"
+                onClick={handleExportToCSV}
+                disabled={filteredAprendices.length === 0}
+              >
                 <Download size={20} />
                 <span>Exportar</span>
               </Button>
@@ -333,8 +885,8 @@ export default function AprendicesPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total</p>
-                  <p className="text-2xl font-bold">{aprendices.length}</p>
+                  <p className="text-sm text-gray-800 font-semibold">Total</p>
+                  <p className="text-2xl font-bold text-gray-900">{aprendices.length}</p>
                 </div>
                 <GraduationCap className="h-8 w-8 text-blue-500" />
               </div>
@@ -347,7 +899,7 @@ export default function AprendicesPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Activos</p>
+                  <p className="text-sm text-gray-800 font-semibold">Activos</p>
                   <p className="text-2xl font-bold text-green-600">
                     {aprendices.filter((a) => a.estadoAcademico === 'ACTIVO').length}
                   </p>
@@ -365,7 +917,7 @@ export default function AprendicesPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Suspendidos</p>
+                  <p className="text-sm text-gray-800 font-semibold">Suspendidos</p>
                   <p className="text-2xl font-bold text-orange-600">
                     {aprendices.filter((a) => a.estadoAcademico === 'SUSPENDIDO').length}
                   </p>
@@ -377,15 +929,15 @@ export default function AprendicesPage() {
             </CardContent>
           </Card>
           <Card 
-            className={`cursor-pointer transition-all hover:shadow-lg ${estadoFilter === 'DESERTOR' ? 'ring-2 ring-red-400 shadow-md' : ''}`}
-            onClick={() => setEstadoFilter('DESERTOR')}
+            className={`cursor-pointer transition-all hover:shadow-lg ${estadoFilter === 'RETIRADO' ? 'ring-2 ring-red-400 shadow-md' : ''}`}
+            onClick={() => setEstadoFilter('RETIRADO')}
           >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Desertores</p>
+                  <p className="text-sm text-gray-800 font-semibold">Retirados</p>
                   <p className="text-2xl font-bold text-red-600">
-                    {aprendices.filter((a) => a.estadoAcademico === 'DESERTOR').length}
+                    {aprendices.filter((a) => a.estadoAcademico === 'RETIRADO').length}
                   </p>
                 </div>
                 <div className="h-8 w-8 bg-red-100 rounded-full flex items-center justify-center">

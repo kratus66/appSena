@@ -46,6 +46,7 @@ async function bootstrap() {
     .addTag('Planes de Mejoramiento')
     .addTag('Actas')
     .addTag('Agenda')
+    .addTag('Notificaciones')
     .addTag('Métricas')
     .addTag('Auth')
     .build();
