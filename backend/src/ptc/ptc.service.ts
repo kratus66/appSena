@@ -16,9 +16,11 @@ import { CreateActaDto } from './dto/create-acta.dto';
 import { UpdateActaDto } from './dto/update-acta.dto';
 import { UpdateActaEstadoDto } from './dto/update-acta-estado.dto';
 import { QueryActaDto } from './dto/query-acta.dto';
+import { CreatePtcFromCaseDto } from './dto/create-ptc-from-case.dto';
 import { User, UserRole } from '../users/entities/user.entity';
 import { FichasService } from '../fichas/fichas.service';
 import { AprendicesService } from '../aprendices/aprendices.service';
+import { DisciplinarioService } from '../disciplinario/disciplinario.service';
 
 @Injectable()
 export class PtcService {
@@ -33,6 +35,7 @@ export class PtcService {
     private actaAsistenteRepository: Repository<ActaAsistente>,
     private fichasService: FichasService,
     private aprendicesService: AprendicesService,
+    private disciplinarioService: DisciplinarioService,
   ) {}
 
   // ==================== PTC CRUD ====================
@@ -64,6 +67,51 @@ export class PtcService {
 
     const ptc = this.ptcRepository.create({
       ...createPtcDto,
+      createdById: user.id,
+    });
+
+    return this.ptcRepository.save(ptc);
+  }
+
+  async createPtcFromCase(createDto: CreatePtcFromCaseDto, user: User): Promise<Ptc> {
+    // Obtener el caso disciplinario
+    const caso = await this.disciplinarioService.findOne(createDto.casoId, user);
+
+    // Validar que el caso existe y está en estado que permite crear PTC
+    if (caso.estado === 'BORRADOR') {
+      throw new BadRequestException('No se puede crear un PTC desde un caso en estado BORRADOR');
+    }
+
+    // Validar que no existe otro PTC VIGENTE para el mismo aprendiz
+    const ptcVigenteExistente = await this.ptcRepository.findOne({
+      where: {
+        aprendizId: caso.aprendizId,
+        estado: PtcEstado.VIGENTE,
+      },
+    });
+
+    if (ptcVigenteExistente) {
+      throw new BadRequestException(
+        'El aprendiz ya tiene un PTC vigente. Debe cerrarlo antes de crear uno nuevo.',
+      );
+    }
+
+    // Validar permisos del instructor sobre la ficha
+    await this.validateFichaPermissions(caso.fichaId, user);
+
+    // Crear el PTC basado en el caso disciplinario
+    const motivo = createDto.motivo || `PTC derivado del caso disciplinario: ${caso.asunto}`;
+    const descripcion = createDto.descripcion || caso.descripcion;
+    const fechaInicio = createDto.fechaInicio || new Date().toISOString().split('T')[0];
+
+    const ptc = this.ptcRepository.create({
+      fichaId: caso.fichaId,
+      aprendizId: caso.aprendizId,
+      casoDisciplinarioId: caso.id,
+      motivo,
+      descripcion,
+      fechaInicio,
+      estado: PtcEstado.BORRADOR,
       createdById: user.id,
     });
 

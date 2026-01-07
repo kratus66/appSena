@@ -23,6 +23,7 @@ import { CreateActaDto } from './dto/create-acta.dto';
 import { UpdateActaDto } from './dto/update-acta.dto';
 import { UpdateActaEstadoDto } from './dto/update-acta-estado.dto';
 import { QueryActaDto } from './dto/query-acta.dto';
+import { CreatePtcFromCaseDto } from './dto/create-ptc-from-case.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -43,6 +44,14 @@ export class PtcController {
   @ApiResponse({ status: 201, description: 'PTC creado exitosamente' })
   createPtc(@Body() createPtcDto: CreatePtcDto, @Request() req) {
     return this.ptcService.createPtc(createPtcDto, req.user);
+  }
+
+  @Post('desde-caso')
+  @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Crear un PTC desde un caso disciplinario' })
+  @ApiResponse({ status: 201, description: 'PTC creado desde caso disciplinario' })
+  createPtcFromCase(@Body() createDto: CreatePtcFromCaseDto, @Request() req) {
+    return this.ptcService.createPtcFromCase(createDto, req.user);
   }
 
   @Get()
