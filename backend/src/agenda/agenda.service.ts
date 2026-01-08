@@ -50,7 +50,7 @@ export class AgendaService {
 
     // Validar que aprendiz pertenece a la ficha (si ambos vienen)
     if (createEventDto.aprendizId && createEventDto.fichaId) {
-      const aprendiz = await this.aprendicesService.findOne(createEventDto.aprendizId, user.id);
+      const aprendiz = await this.aprendicesService.findOne(createEventDto.aprendizId, user);
       if (aprendiz.fichaId !== createEventDto.fichaId) {
         throw new BadRequestException('El aprendiz no pertenece a la ficha especificada');
       }
@@ -58,7 +58,7 @@ export class AgendaService {
 
     // Si solo viene aprendiz, derivar la ficha
     if (createEventDto.aprendizId && !createEventDto.fichaId) {
-      const aprendiz = await this.aprendicesService.findOne(createEventDto.aprendizId, user.id);
+      const aprendiz = await this.aprendicesService.findOne(createEventDto.aprendizId, user);
       createEventDto.fichaId = aprendiz.fichaId;
       await this.validateFichaPermission(createEventDto.fichaId, user);
     }

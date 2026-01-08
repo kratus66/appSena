@@ -289,13 +289,6 @@ export default function ProgramasPage() {
             </CardContent>
           </Card>
         </div>
-                  </p>
-                </div>
-                <BookOpen className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Programas Grid */}
         {loading ? (

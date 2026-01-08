@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { api } from '@/lib/api';
@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, BarChart3 } from 'lucide-react';
 
-export default function ResumenPage() {
+function ResumenContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fichaId = searchParams.get('fichaId') || '';
@@ -289,5 +289,13 @@ export default function ResumenPage() {
       </Card>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function ResumenPage() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <ResumenContent />
+    </Suspense>
   );
 }

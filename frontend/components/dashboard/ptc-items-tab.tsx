@@ -149,7 +149,7 @@ export default function PtcItemsTab({ ptcId, ptcEstado }: PtcItemsTabProps) {
     const variants = {
       PENDIENTE: 'secondary' as const,
       CUMPLIDO: 'default' as const,
-      INCUMPLIDO: 'destructive' as const,
+      INCUMPLIDO: 'danger' as const,
     };
     
     return (

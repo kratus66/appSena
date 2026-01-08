@@ -25,8 +25,12 @@ export default function DashboardPage() {
     fichasActivas: 0,
     totalColegios: 0,
     totalUsuarios: 0,
+    suspendidos: 0,
+    retirados: 0,
+    desertores: 0,
   });
 
+  const [fichasPorPrograma, setFichasPorPrograma] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -35,20 +39,68 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      const [aprendices, fichas, colegios, users] = await Promise.all([
-        api.get('/aprendices?page=1&limit=1'),
-        api.get('/fichas?page=1&limit=1'),
-        api.get('/colegios?page=1&limit=1'),
-        api.get('/users?page=1&limit=1'),
+      const [aprendices, fichas, colegios, users, programas] = await Promise.all([
+        api.get('/aprendices?page=1&limit=1000'),
+        api.get('/fichas?page=1&limit=1000'),
+        api.get('/colegios?page=1&limit=1000'),
+        api.get('/users?page=1&limit=1000'),
+        api.get('/programas?page=1&limit=1000'),
       ]);
+
+      // Contar aprendices por estado académico
+      const aprendicesData = aprendices.data.data || [];
+      const aprendicesActivos = aprendicesData.filter(
+        (a: any) => a.estadoAcademico === 'ACTIVO'
+      ).length;
+      const suspendidos = aprendicesData.filter(
+        (a: any) => a.estadoAcademico === 'SUSPENDIDO'
+      ).length;
+      const retirados = aprendicesData.filter(
+        (a: any) => a.estadoAcademico === 'RETIRADO'
+      ).length;
+      const desertores = aprendicesData.filter(
+        (a: any) => a.estadoAcademico === 'DESERTOR'
+      ).length;
+
+      // Contar fichas activas
+      const fichasData = fichas.data.data || [];
+      const fichasActivas = fichasData.filter(
+        (f: any) => f.estado === 'ACTIVA'
+      ).length;
+
+      // Contar fichas por programa
+      const programasData = programas.data.data || [];
+      const fichasPorProgramaMap: any = {};
+      
+      fichasData.forEach((ficha: any) => {
+        if (ficha.programa && ficha.programa.nombre) {
+          const nombrePrograma = ficha.programa.nombre;
+          if (fichasPorProgramaMap[nombrePrograma]) {
+            fichasPorProgramaMap[nombrePrograma]++;
+          } else {
+            fichasPorProgramaMap[nombrePrograma] = 1;
+          }
+        }
+      });
+
+      // Convertir a array para el gráfico
+      const fichasPorProgramaArray = Object.entries(fichasPorProgramaMap)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a: any, b: any) => b.value - a.value)
+        .slice(0, 5); // Top 5 programas
+
+      setFichasPorPrograma(fichasPorProgramaArray);
 
       setStats({
         totalAprendices: aprendices.data.total || 0,
-        aprendicesActivos: aprendices.data.total || 0,
+        aprendicesActivos: aprendicesActivos,
         totalFichas: fichas.data.total || 0,
-        fichasActivas: fichas.data.total || 0,
+        fichasActivas: fichasActivas,
         totalColegios: colegios.data.total || 0,
         totalUsuarios: users.data.total || 0,
+        suspendidos: suspendidos,
+        retirados: retirados,
+        desertores: desertores,
       });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -68,17 +120,9 @@ export default function DashboardPage() {
 
   const estadoAcademico = [
     { name: 'Activos', value: stats.aprendicesActivos },
-    { name: 'Suspendidos', value: 5 },
-    { name: 'Retirados', value: 3 },
-    { name: 'Desertores', value: 2 },
-  ];
-
-  const fichasPorPrograma = [
-    { name: 'Sistemas', value: 8 },
-    { name: 'Cocina', value: 6 },
-    { name: 'Electricidad', value: 5 },
-    { name: 'Mecánica', value: 4 },
-    { name: 'Otros', value: 7 },
+    { name: 'Suspendidos', value: stats.suspendidos },
+    { name: 'Retirados', value: stats.retirados },
+    { name: 'Desertores', value: stats.desertores },
   ];
 
   if (loading) {

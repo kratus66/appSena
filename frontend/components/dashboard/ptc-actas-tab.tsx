@@ -54,14 +54,21 @@ export default function PtcActasTab({ ptcId, fichaId, aprendizId }: PtcActasTabP
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedActa, setSelectedActa] = useState<Acta | null>(null);
   const [editingActa, setEditingActa] = useState<Acta | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    fechaReunion: string;
+    lugar: string;
+    asunto: string;
+    desarrollo: string;
+    acuerdos: string;
+    asistentes: ActaAsistente[];
+  }>({
     fechaReunion: new Date().toISOString(),
     lugar: '',
     asunto: '',
     desarrollo: '',
     acuerdos: '',
     asistentes: [
-      { nombre: '', rol: 'APRENDIZ' as const, email: '', telefono: '' }
+      { nombre: '', rol: 'APRENDIZ', email: '', telefono: '' }
     ],
   });
 

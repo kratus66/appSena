@@ -1,0 +1,35 @@
+{
+  "serviceName": "appsena-backend-svc",
+  "containers": {
+    "backend": {
+      "image": ":appsena-backend.latest",
+      "environment": {
+        "PORT": "3000",
+        "NODE_ENV": "production",
+        "DB_HOST": "YOUR_RDS_ENDPOINT.us-east-1.rds.amazonaws.com",
+        "DB_PORT": "5432",
+        "DB_USERNAME": "YOUR_DB_USERNAME",
+        "DB_PASSWORD": "YOUR_DB_PASSWORD",
+        "DB_DATABASE": "appsena",
+        "JWT_SECRET": "YOUR_SECURE_JWT_SECRET_MIN_32_CHARS",
+        "JWT_EXPIRATION": "7d",
+        "FRONTEND_URL": "https://YOUR_FRONTEND_PUBLIC_DOMAIN"
+      },
+      "ports": {
+        "3000": "HTTP"
+      }
+    }
+  },
+  "publicEndpoint": {
+    "containerName": "backend",
+    "containerPort": 3000,
+    "healthCheck": {
+      "healthyThreshold": 2,
+      "unhealthyThreshold": 2,
+      "timeoutSeconds": 5,
+      "intervalSeconds": 30,
+      "path": "/api/health",
+      "successCodes": "200-299"
+    }
+  }
+}

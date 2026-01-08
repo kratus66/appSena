@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { api } from '@/lib/api';
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 
-export default function AlertasPage() {
+function AlertasContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fichaId = searchParams.get('fichaId') || '';
@@ -231,5 +231,13 @@ export default function AlertasPage() {
       </Card>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function AlertasPage() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <AlertasContent />
+    </Suspense>
   );
 }

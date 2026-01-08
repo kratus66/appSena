@@ -97,9 +97,9 @@ export default function DisciplinarioPage() {
         limit: '10',
       });
 
-      if (filters.estado) params.append('estado', filters.estado);
-      if (filters.tipo) params.append('tipo', filters.tipo);
-      if (filters.gravedad) params.append('gravedad', filters.gravedad);
+      if (filters.estado && filters.estado !== 'all') params.append('estado', filters.estado);
+      if (filters.tipo && filters.tipo !== 'all') params.append('tipo', filters.tipo);
+      if (filters.gravedad && filters.gravedad !== 'all') params.append('gravedad', filters.gravedad);
       if (filters.search) params.append('search', filters.search);
 
       const response = await api.get<PaginatedResponse<DisciplinaryCase>>(
@@ -142,7 +142,7 @@ export default function DisciplinarioPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Módulo Disciplinario</h1>
-            <p className="text-gray-600 mt-1">Gestión de casos disciplinarios y seguimiento</p>
+            <p className="text-gray-700 mt-1 font-medium">Gestión de casos disciplinarios y seguimiento</p>
           </div>
           <Button
             onClick={handleCreateCase}
@@ -155,7 +155,7 @@ export default function DisciplinarioPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleFilterChange('estado', 'all')}>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -167,7 +167,7 @@ export default function DisciplinarioPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleFilterChange('estado', 'ABIERTO')}>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -181,7 +181,7 @@ export default function DisciplinarioPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleFilterChange('estado', 'SEGUIMIENTO')}>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -195,7 +195,7 @@ export default function DisciplinarioPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleFilterChange('estado', 'CERRADO')}>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -213,7 +213,7 @@ export default function DisciplinarioPage() {
         {/* Filters */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-gray-900 font-bold">
               <Filter className="h-5 w-5" />
               Filtros
             </CardTitle>
@@ -235,7 +235,7 @@ export default function DisciplinarioPage() {
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos los estados</SelectItem>
+                  <SelectItem value="all">Todos los estados</SelectItem>
                   <SelectItem value="BORRADOR">Borrador</SelectItem>
                   <SelectItem value="ABIERTO">Abierto</SelectItem>
                   <SelectItem value="SEGUIMIENTO">Seguimiento</SelectItem>
@@ -251,7 +251,7 @@ export default function DisciplinarioPage() {
                   <SelectValue placeholder="Tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos los tipos</SelectItem>
+                  <SelectItem value="all">Todos los tipos</SelectItem>
                   <SelectItem value="CONVIVENCIA">Convivencia</SelectItem>
                   <SelectItem value="ACADEMICO">Académico</SelectItem>
                   <SelectItem value="ASISTENCIA">Asistencia</SelectItem>
@@ -266,7 +266,7 @@ export default function DisciplinarioPage() {
                   <SelectValue placeholder="Gravedad" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas las gravedades</SelectItem>
+                  <SelectItem value="all">Todas las gravedades</SelectItem>
                   <SelectItem value="LEVE">Leve</SelectItem>
                   <SelectItem value="MEDIA">Media</SelectItem>
                   <SelectItem value="ALTA">Alta</SelectItem>
@@ -329,7 +329,7 @@ export default function DisciplinarioPage() {
                             {tipoLabels[caso.tipo] || caso.tipo}
                           </Badge>
                           <Badge variant="outline" className="bg-gray-50">
-                            {caso.acciones.length} {caso.acciones.length === 1 ? 'acción' : 'acciones'}
+                            {caso.acciones?.length || 0} {(caso.acciones?.length || 0) === 1 ? 'acción' : 'acciones'}
                           </Badge>
                         </div>
 

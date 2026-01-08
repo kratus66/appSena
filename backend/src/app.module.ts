@@ -17,6 +17,7 @@ import { UploadModule } from './upload/upload.module';
 import { PtcModule } from './ptc/ptc.module';
 import { AgendaModule } from './agenda/agenda.module';
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
+import { ReportesModule } from './reportes/reportes.module';
 import { User } from './users/entities/user.entity';
 import { Colegio } from './colegios/entities/colegio.entity';
 import { Programa } from './programas/entities/programa.entity';
@@ -68,6 +69,7 @@ import { Notification } from './notificaciones/entities/notification.entity';
     PtcModule,
     AgendaModule,
     NotificacionesModule,
+    ReportesModule,
     UploadModule,
     SeederModule,
   ],

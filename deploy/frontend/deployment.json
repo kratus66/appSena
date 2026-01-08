@@ -1,0 +1,28 @@
+{
+  "serviceName": "appsena-frontend-svc",
+  "containers": {
+    "frontend": {
+      "image": ":appsena-frontend.latest",
+      "environment": {
+        "PORT": "3001",
+        "NODE_ENV": "production",
+        "NEXT_PUBLIC_API_URL": "https://YOUR_BACKEND_PUBLIC_DOMAIN/api"
+      },
+      "ports": {
+        "3001": "HTTP"
+      }
+    }
+  },
+  "publicEndpoint": {
+    "containerName": "frontend",
+    "containerPort": 3001,
+    "healthCheck": {
+      "healthyThreshold": 2,
+      "unhealthyThreshold": 2,
+      "timeoutSeconds": 5,
+      "intervalSeconds": 30,
+      "path": "/",
+      "successCodes": "200-299"
+    }
+  }
+}
