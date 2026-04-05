@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { api } from '@/lib/api';
 import { Ficha, PaginatedResponse, CreateSesionDto } from '@/types';
@@ -12,11 +12,22 @@ import { ArrowLeft } from 'lucide-react';
 
 export default function NuevaSesionPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fichaIdParam = searchParams.get('fichaId');
   const [fichas, setFichas] = useState<Ficha[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const getLocalDate = () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
   const [formData, setFormData] = useState<CreateSesionDto>({
-    fichaId: '',
-    fecha: new Date().toISOString().split('T')[0],
+    fichaId: fichaIdParam || '',
+    fecha: getLocalDate(),
     tema: '',
     observaciones: '',
   });
@@ -30,7 +41,7 @@ export default function NuevaSesionPage() {
     try {
       const response = await api.get<PaginatedResponse<Ficha>>('/fichas?limit=100');
       setFichas(response.data.data);
-      if (response.data.data.length > 0) {
+      if (!fichaIdParam && response.data.data.length > 0) {
         setFormData((prev) => ({ ...prev, fichaId: response.data.data[0].id }));
       }
     } catch (error) {
@@ -87,22 +98,33 @@ export default function NuevaSesionPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Ficha <span className="text-red-500">*</span>
             </label>
-            <select
-              value={formData.fichaId}
-              onChange={(e) =>
-                setFormData({ ...formData, fichaId: e.target.value })
-              }
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Selecciona una ficha</option>
-              {fichas.map((ficha) => (
-                <option key={ficha.id} value={ficha.id}>
-                  {ficha.numeroFicha} - {ficha.programa?.nombre || 'Sin programa'} (
-                  {ficha.jornada})
-                </option>
-              ))}
-            </select>
+            {fichaIdParam ? (
+              <div className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900">
+                {(() => {
+                  const ficha = fichas.find((f) => f.id === fichaIdParam);
+                  return ficha
+                    ? `${ficha.numeroFicha} - ${ficha.programa?.nombre || 'Sin programa'} (${ficha.jornada})`
+                    : 'Cargando ficha...';
+                })()}
+              </div>
+            ) : (
+              <select
+                value={formData.fichaId}
+                onChange={(e) =>
+                  setFormData({ ...formData, fichaId: e.target.value })
+                }
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              >
+                <option value="" className="text-gray-900">Selecciona una ficha</option>
+                {fichas.map((ficha) => (
+                  <option key={ficha.id} value={ficha.id} className="text-gray-900">
+                    {ficha.numeroFicha} - {ficha.programa?.nombre || 'Sin programa'} (
+                    {ficha.jornada})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Fecha */}
@@ -117,7 +139,7 @@ export default function NuevaSesionPage() {
                 setFormData({ ...formData, fecha: e.target.value })
               }
               required
-              max={new Date().toISOString().split('T')[0]}
+              max={getLocalDate()}
             />
             <p className="text-xs text-gray-500 mt-1">
               No puedes crear sesiones para fechas futuras
@@ -151,7 +173,7 @@ export default function NuevaSesionPage() {
                 setFormData({ ...formData, observaciones: e.target.value })
               }
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900"
               placeholder="Agrega observaciones sobre la sesión (opcional)"
             />
           </div>

@@ -16,7 +16,10 @@ export default function AsistenciasPage() {
   const [fichas, setFichas] = useState<Ficha[]>([]);
   const [alertas, setAlertas] = useState<AlertaRiesgo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedFicha, setSelectedFicha] = useState<string>('');
+  const [fichasReady, setFichasReady] = useState(false);
+  const [selectedFicha, setSelectedFicha] = useState<string>(
+    typeof window !== 'undefined' ? (localStorage.getItem('asistencias_selectedFicha') || '') : ''
+  );
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
@@ -25,21 +28,28 @@ export default function AsistenciasPage() {
   }, []);
 
   useEffect(() => {
+    if (!fichasReady) return; // esperar a que las fichas estén cargadas
     fetchSesiones();
     if (selectedFicha) {
       fetchAlertas();
     }
-  }, [selectedFicha, page]);
+  }, [selectedFicha, page, fichasReady]);
 
   const fetchFichas = async () => {
     try {
       const response = await api.get<PaginatedResponse<Ficha>>('/fichas?limit=100');
       setFichas(response.data.data);
       if (response.data.data.length > 0) {
-        setSelectedFicha(response.data.data[0].id);
+        const saved = localStorage.getItem('asistencias_selectedFicha');
+        const exists = saved && response.data.data.some((f) => f.id === saved);
+        const fichaId = exists ? saved : response.data.data[0].id;
+        setSelectedFicha(fichaId);
+        if (!exists) localStorage.setItem('asistencias_selectedFicha', fichaId);
       }
     } catch (error) {
       console.error('Error al obtener fichas:', error);
+    } finally {
+      setFichasReady(true);
     }
   };
 
@@ -85,6 +95,7 @@ export default function AsistenciasPage() {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      timeZone: 'UTC',
     });
   };
 
@@ -109,7 +120,7 @@ export default function AsistenciasPage() {
             </p>
           </div>
           <Button
-            onClick={() => router.push('/dashboard/asistencias/nueva-sesion')}
+            onClick={() => router.push(`/dashboard/asistencias/nueva-sesion${selectedFicha ? `?fichaId=${selectedFicha}` : ''}`)}
             className="bg-green-600 hover:bg-green-700"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -124,12 +135,15 @@ export default function AsistenciasPage() {
         </label>
         <select
           value={selectedFicha}
-          onChange={(e) => setSelectedFicha(e.target.value)}
-          className="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          onChange={(e) => {
+            setSelectedFicha(e.target.value);
+            localStorage.setItem('asistencias_selectedFicha', e.target.value);
+          }}
+          className="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
         >
-          <option value="">Todas las fichas</option>
+          <option value="" className="text-gray-900">Todas las fichas</option>
           {fichas.map((ficha) => (
-            <option key={ficha.id} value={ficha.id}>
+            <option key={ficha.id} value={ficha.id} className="text-gray-900">
               {ficha.numeroFicha} - {ficha.programa?.nombre || 'Sin programa'}
             </option>
           ))}
@@ -206,7 +220,7 @@ export default function AsistenciasPage() {
           <div className="text-center py-8">
             <p className="text-gray-600">No hay sesiones registradas</p>
             <Button
-              onClick={() => router.push('/dashboard/asistencias/nueva-sesion')}
+              onClick={() => router.push(`/dashboard/asistencias/nueva-sesion${selectedFicha ? `?fichaId=${selectedFicha}` : ''}`)}
               className="mt-4 bg-blue-600 hover:bg-blue-700"
             >
               Crear primera sesión

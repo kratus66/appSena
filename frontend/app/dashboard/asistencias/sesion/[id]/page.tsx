@@ -93,8 +93,9 @@ export default function SesionDetailPage() {
             <h1 className="text-2xl font-bold text-gray-900">
               Detalle de Sesión
             </h1>
-            <p className="text-gray-500">
+            <p className="text-gray-900">
               {new Date(sesion.fecha).toLocaleDateString('es-CO', {
+                timeZone: 'UTC',
                 weekday: 'long',
                 year: 'numeric',
                 month: 'long',
@@ -116,24 +117,24 @@ export default function SesionDetailPage() {
       <Card className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Ficha</h3>
-            <p className="text-lg font-semibold">{sesion.ficha?.numeroFicha}</p>
-            <p className="text-sm text-gray-600">{sesion.ficha?.programa?.nombre}</p>
+            <h3 className="text-sm font-medium text-gray-900 mb-2">Ficha</h3>
+            <p className="text-lg font-semibold text-gray-900">{sesion.ficha?.numeroFicha}</p>
+            <p className="text-sm text-gray-900">{sesion.ficha?.programa?.nombre}</p>
           </div>
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Instructor</h3>
-            <p className="text-lg font-semibold">
+            <h3 className="text-sm font-medium text-gray-900 mb-2">Instructor</h3>
+            <p className="text-lg font-semibold text-gray-900">
               {sesion.createdByUser?.nombre}
             </p>
           </div>
           <div className="md:col-span-2">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Tema</h3>
+            <h3 className="text-sm font-medium text-gray-900 mb-2">Tema</h3>
             <p className="text-gray-900">{sesion.tema}</p>
           </div>
           {sesion.observaciones && (
             <div className="md:col-span-2">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Observaciones</h3>
-              <p className="text-gray-700">{sesion.observaciones}</p>
+              <h3 className="text-sm font-medium text-gray-900 mb-2">Observaciones</h3>
+              <p className="text-gray-900">{sesion.observaciones}</p>
             </div>
           )}
         </div>
@@ -144,8 +145,8 @@ export default function SesionDetailPage() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total</p>
-              <p className="text-2xl font-bold">{stats.total}</p>
+              <p className="text-sm text-gray-900">Total</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
             </div>
             <FileText className="w-8 h-8 text-blue-500" />
           </div>
@@ -153,7 +154,7 @@ export default function SesionDetailPage() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Presentes</p>
+              <p className="text-sm text-gray-900">Presentes</p>
               <p className="text-2xl font-bold text-green-600">{stats.presentes}</p>
             </div>
             <CheckCircle className="w-8 h-8 text-green-500" />
@@ -162,7 +163,7 @@ export default function SesionDetailPage() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Ausentes</p>
+              <p className="text-sm text-gray-900">Ausentes</p>
               <p className="text-2xl font-bold text-red-600">{stats.ausentes}</p>
             </div>
             <XCircle className="w-8 h-8 text-red-500" />
@@ -171,7 +172,7 @@ export default function SesionDetailPage() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Justificadas</p>
+              <p className="text-sm text-gray-900">Justificadas</p>
               <p className="text-2xl font-bold text-yellow-600">{stats.justificadas}</p>
             </div>
             <AlertCircle className="w-8 h-8 text-yellow-500" />
@@ -181,25 +182,25 @@ export default function SesionDetailPage() {
 
       {/* Lista de Asistencias */}
       <Card className="p-6">
-        <h2 className="text-lg font-semibold mb-4">Lista de Asistencia</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Lista de Asistencia</h2>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4">#</th>
-                <th className="text-left py-3 px-4">Documento</th>
-                <th className="text-left py-3 px-4">Aprendiz</th>
-                <th className="text-left py-3 px-4">Estado</th>
-                <th className="text-left py-3 px-4">Motivo</th>
-                <th className="text-left py-3 px-4">Acciones</th>
+                <th className="text-left py-3 px-4 text-gray-900">#</th>
+                <th className="text-left py-3 px-4 text-gray-900">Documento</th>
+                <th className="text-left py-3 px-4 text-gray-900">Aprendiz</th>
+                <th className="text-left py-3 px-4 text-gray-900">Estado</th>
+                <th className="text-left py-3 px-4 text-gray-900">Motivo</th>
+                <th className="text-left py-3 px-4 text-gray-900">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {asistencias.map((asistencia, index) => (
                 <tr key={asistencia.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4">{index + 1}</td>
-                  <td className="py-3 px-4">{asistencia.aprendiz?.documento}</td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 text-gray-900">{index + 1}</td>
+                  <td className="py-3 px-4 text-gray-900">{asistencia.aprendiz?.documento}</td>
+                  <td className="py-3 px-4 text-gray-900">
                     {asistencia.aprendiz?.nombres} {asistencia.aprendiz?.apellidos}
                   </td>
                   <td className="py-3 px-4">
@@ -211,7 +212,7 @@ export default function SesionDetailPage() {
                       <Badge className="bg-red-100 text-red-800">Ausente</Badge>
                     )}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 text-gray-900">
                     {asistencia.motivoJustificacion || '-'}
                   </td>
                   <td className="py-3 px-4">
@@ -378,19 +379,19 @@ function JustifyModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">Justificar Ausencia</h2>
-        <p className="text-gray-600 mb-4">
+        <h2 className="text-xl font-bold mb-4 text-gray-900">Justificar Ausencia</h2>
+        <p className="text-gray-900 mb-4">
           Aprendiz: {asistencia.aprendiz?.nombres} {asistencia.aprendiz?.apellidos}
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Motivo *
             </label>
             <textarea
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-900 placeholder-gray-500"
               rows={4}
               placeholder="Describa el motivo de la ausencia..."
               required
@@ -399,7 +400,7 @@ function JustifyModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Evidencia (opcional)
             </label>
             
@@ -419,11 +420,11 @@ function JustifyModal({
                     htmlFor="file-upload"
                     className="cursor-pointer flex flex-col items-center"
                   >
-                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                    <span className="text-sm text-gray-600">
+                    <Upload className="w-8 h-8 text-gray-900 mb-2" />
+                    <span className="text-sm text-gray-900">
                       Haz clic para seleccionar un archivo
                     </span>
-                    <span className="text-xs text-gray-500 mt-1">
+                    <span className="text-xs text-gray-900 mt-1">
                       PDF, imágenes, Word (máx. 5MB)
                     </span>
                   </label>

@@ -126,7 +126,7 @@ export default function RegistrarAsistenciaPage() {
         </Button>
         <h1 className="text-3xl font-bold text-gray-900">Registrar Asistencia</h1>
         <div className="mt-2 text-gray-600">
-          <p>Fecha: {new Date(sesion?.fecha).toLocaleDateString('es-CO')}</p>
+          <p>Fecha: {new Date(sesion?.fecha).toLocaleDateString('es-CO', { timeZone: 'UTC' })}</p>
           <p>Tema: {sesion?.tema || 'Sin tema'}</p>
           <p>Ficha: {sesion?.ficha?.numeroFicha}</p>
         </div>

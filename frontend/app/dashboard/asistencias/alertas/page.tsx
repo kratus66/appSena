@@ -171,6 +171,7 @@ function AlertasContent() {
                             {new Date(sesion.fecha).toLocaleDateString('es-CO', {
                               day: '2-digit',
                               month: 'short',
+                              timeZone: 'UTC',
                             })}
                           </div>
                           <div className="text-xs">

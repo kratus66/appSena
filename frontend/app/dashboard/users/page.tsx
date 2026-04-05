@@ -268,7 +268,6 @@ export default function UsersPage() {
                 <option value="instructor">Instructor</option>
                 <option value="coordinador">Coordinador</option>
                 <option value="aprendiz">Aprendiz</option>
-                <option value="acudiente">Acudiente</option>
               </select>
             </div>
           </CardContent>

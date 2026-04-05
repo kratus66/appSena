@@ -209,9 +209,12 @@ export class FichasService {
       }
     }
 
-    Object.assign(ficha, updateFichaDto);
+    // Usar update() directo para evitar conflictos entre el objeto de relación
+    // cargado en memoria y los nuevos IDs de FK al hacer save()
+    await this.fichaRepository.update(id, updateFichaDto);
 
-    return await this.fichaRepository.save(ficha);
+    // Recargar la entidad con todas las relaciones actualizadas
+    return this.findOne(id);
   }
 
   async updateEstado(

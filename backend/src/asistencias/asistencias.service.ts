@@ -56,9 +56,11 @@ export class AsistenciasService {
     }
 
     // Verificar que no exista una sesión para la misma ficha y fecha
-    const existingSesion = await this.sesionRepository.findOne({
-      where: { fichaId, fecha: new Date(fecha) },
-    });
+    const existingSesion = await this.sesionRepository
+      .createQueryBuilder('sesion')
+      .where('sesion.fichaId = :fichaId', { fichaId })
+      .andWhere("TO_CHAR(sesion.fecha, 'YYYY-MM-DD') = :fecha", { fecha })
+      .getOne();
 
     if (existingSesion) {
       throw new ConflictException(
@@ -66,10 +68,11 @@ export class AsistenciasService {
       );
     }
 
-    // Crear la sesión
+    // Crear la sesión (usar T12:00:00Z para evitar conversión de timezone sobre fecha pura)
+    const fechaDate = new Date(`${fecha}T12:00:00Z`);
     const sesion = this.sesionRepository.create({
       fichaId,
-      fecha: new Date(fecha),
+      fecha: fechaDate,
       tema,
       observaciones,
       createdByUserId: userId,

@@ -17,9 +17,10 @@ import {
   Users,
   AlertCircle,
   X,
+  Save,
 } from 'lucide-react';
 import api from '@/lib/api';
-import { Ficha } from '@/types';
+import { Ficha, Colegio, Programa, User } from '@/types';
 import { formatDate } from '@/lib/utils';
 
 export default function FichasPage() {
@@ -33,6 +34,39 @@ export default function FichasPage() {
   const [isViewModalOpen, setIsViewModalOpen] = React.useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+
+  // Estado del formulario de creación
+  const [createLoading, setCreateLoading] = React.useState(false);
+  const [createError, setCreateError] = React.useState('');
+  const [createSuccess, setCreateSuccess] = React.useState('');
+  const [createForm, setCreateForm] = React.useState({
+    numeroFicha: '',
+    jornada: 'MAÑANA',
+    estado: 'ACTIVA',
+    fechaInicio: '',
+    fechaFin: '',
+    colegioId: '',
+    programaId: '',
+    instructorId: '',
+  });
+
+  // Estado del formulario de edición
+  const [editLoading, setEditLoading] = React.useState(false);
+  const [editError, setEditError] = React.useState('');
+  const [editSuccess, setEditSuccess] = React.useState('');
+  const [programas, setProgramas] = React.useState<Programa[]>([]);
+  const [colegios, setColegios] = React.useState<Colegio[]>([]);
+  const [instructores, setInstructores] = React.useState<User[]>([]);
+  const [editForm, setEditForm] = React.useState({
+    numeroFicha: '',
+    jornada: '',
+    estado: '',
+    fechaInicio: '',
+    fechaFin: '',
+    colegioId: '',
+    programaId: '',
+    instructorId: '',
+  });
 
   React.useEffect(() => {
     fetchFichas();
@@ -69,7 +103,110 @@ export default function FichasPage() {
 
   const handleEditFicha = (ficha: Ficha) => {
     setSelectedFicha(ficha);
+    setEditError('');
+    setEditSuccess('');
+    setEditForm({
+      numeroFicha: ficha.numeroFicha,
+      jornada: ficha.jornada,
+      estado: ficha.estado,
+      fechaInicio: ficha.fechaInicio ? ficha.fechaInicio.split('T')[0] : '',
+      fechaFin: ficha.fechaFin ? ficha.fechaFin.split('T')[0] : '',
+      colegioId: ficha.colegioId || '',
+      programaId: ficha.programaId || '',
+      instructorId: ficha.instructorId || '',
+    });
+    loadSelectData();
     setIsEditModalOpen(true);
+  };
+
+  const handleUpdateFicha = async () => {
+    if (!selectedFicha) return;
+    setEditLoading(true);
+    setEditError('');
+    setEditSuccess('');
+    try {
+      const payload: any = {
+        numeroFicha: editForm.numeroFicha,
+        jornada: editForm.jornada,
+        fechaInicio: editForm.fechaInicio || undefined,
+        fechaFin: editForm.fechaFin || undefined,
+        colegioId: editForm.colegioId || undefined,
+        programaId: editForm.programaId || undefined,
+        instructorId: editForm.instructorId || undefined,
+      };
+      // Actualizar estado si cambió
+      if (editForm.estado !== selectedFicha.estado) {
+        await api.patch(`/fichas/${selectedFicha.id}/estado`, { estado: editForm.estado });
+      }
+      await api.patch(`/fichas/${selectedFicha.id}`, payload);
+      setEditSuccess('Ficha actualizada correctamente');
+      setTimeout(() => {
+        setIsEditModalOpen(false);
+        setSelectedFicha(null);
+        fetchFichas();
+      }, 1200);
+    } catch (err: any) {
+      setEditError(err?.response?.data?.message || 'Error al actualizar la ficha');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const loadSelectData = () => {
+    Promise.all([
+      api.get('/programas', { params: { limit: 100 } }),
+      api.get('/colegios', { params: { limit: 100 } }),
+      api.get('/users', { params: { limit: 100, rol: 'instructor' } }),
+    ]).then(([progRes, colegRes, usersRes]) => {
+      setProgramas(progRes.data.data || progRes.data || []);
+      setColegios(colegRes.data.data || colegRes.data || []);
+      setInstructores(usersRes.data.data || usersRes.data || []);
+    }).catch(console.error);
+  };
+
+  const handleOpenCreate = () => {
+    setCreateError('');
+    setCreateSuccess('');
+    setCreateForm({
+      numeroFicha: '',
+      jornada: 'MAÑANA',
+      estado: 'ACTIVA',
+      fechaInicio: '',
+      fechaFin: '',
+      colegioId: '',
+      programaId: '',
+      instructorId: '',
+    });
+    loadSelectData();
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCreateFicha = async () => {
+    setCreateLoading(true);
+    setCreateError('');
+    setCreateSuccess('');
+    try {
+      const payload: any = {
+        numeroFicha: createForm.numeroFicha,
+        jornada: createForm.jornada,
+        estado: createForm.estado,
+        colegioId: createForm.colegioId,
+        programaId: createForm.programaId,
+        instructorId: createForm.instructorId,
+        ...(createForm.fechaInicio && { fechaInicio: createForm.fechaInicio }),
+        ...(createForm.fechaFin && { fechaFin: createForm.fechaFin }),
+      };
+      await api.post('/fichas', payload);
+      setCreateSuccess('Ficha creada correctamente');
+      setTimeout(() => {
+        setIsCreateModalOpen(false);
+        fetchFichas();
+      }, 1200);
+    } catch (err: any) {
+      setCreateError(err?.response?.data?.message || 'Error al crear la ficha');
+    } finally {
+      setCreateLoading(false);
+    }
   };
 
   const getEstadoBadge = (estado: string) => {
@@ -105,7 +242,7 @@ export default function FichasPage() {
           </div>
           <Button 
             className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={handleOpenCreate}
           >
             <Plus size={20} />
             <span>Nueva Ficha</span>
@@ -324,21 +461,156 @@ export default function FichasPage() {
 
         {/* Create Ficha Modal */}
         {isCreateModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <Card className="w-full max-w-md">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <Card className="w-full max-w-2xl my-8">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-gray-950 font-bold">Nueva Ficha</CardTitle>
-                  <Button variant="ghost" size="sm" onClick={() => setIsCreateModalOpen(false)}>
+                  <CardTitle className="text-xl font-bold text-gray-950">Nueva Ficha</CardTitle>
+                  <Button variant="ghost" size="sm" onClick={() => { setIsCreateModalOpen(false); setCreateError(''); setCreateSuccess(''); }}>
                     <X size={20} />
                   </Button>
                 </div>
+                <p className="text-sm text-gray-600 mt-1 font-medium">Completa los datos para registrar una nueva ficha de formación</p>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600 mb-4">Funcionalidad de creación próximamente.</p>
-                <Button onClick={() => setIsCreateModalOpen(false)} className="w-full bg-green-600 hover:bg-green-700">
-                  Cerrar
-                </Button>
+                <div className="space-y-5">
+                  {/* Número de ficha + Jornada */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-950 mb-2">Número de Ficha *</label>
+                      <Input
+                        value={createForm.numeroFicha}
+                        onChange={(e) => setCreateForm((f) => ({ ...f, numeroFicha: e.target.value }))}
+                        placeholder="Ej: 2654321"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-950 mb-2">Jornada *</label>
+                      <select
+                        value={createForm.jornada}
+                        onChange={(e) => setCreateForm((f) => ({ ...f, jornada: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 text-gray-900"
+                      >
+                        <option value="MAÑANA" className="text-gray-900">Mañana</option>
+                        <option value="TARDE" className="text-gray-900">Tarde</option>
+                        <option value="NOCHE" className="text-gray-900">Noche</option>
+                        <option value="MIXTA" className="text-gray-900">Mixta</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Estado */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-950 mb-2">Estado</label>
+                    <select
+                      value={createForm.estado}
+                      onChange={(e) => setCreateForm((f) => ({ ...f, estado: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 text-gray-900"
+                    >
+                      <option value="ACTIVA" className="text-gray-900">Activa</option>
+                      <option value="EN_CIERRE" className="text-gray-900">En Cierre</option>
+                      <option value="FINALIZADA" className="text-gray-900">Finalizada</option>
+                    </select>
+                  </div>
+
+                  {/* Fechas */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-950 mb-2">Fecha de Inicio</label>
+                      <Input
+                        type="date"
+                        value={createForm.fechaInicio}
+                        onChange={(e) => setCreateForm((f) => ({ ...f, fechaInicio: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-950 mb-2">Fecha de Fin</label>
+                      <Input
+                        type="date"
+                        value={createForm.fechaFin}
+                        onChange={(e) => setCreateForm((f) => ({ ...f, fechaFin: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Programa */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-950 mb-2">Programa de Formación *</label>
+                    <select
+                      value={createForm.programaId}
+                      onChange={(e) => setCreateForm((f) => ({ ...f, programaId: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 text-gray-900"
+                    >
+                      <option value="" className="text-gray-900">-- Seleccionar programa --</option>
+                      {programas.map((p) => (
+                        <option key={p.id} value={p.id} className="text-gray-900">{p.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Colegio */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-950 mb-2">Colegio *</label>
+                    <select
+                      value={createForm.colegioId}
+                      onChange={(e) => setCreateForm((f) => ({ ...f, colegioId: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 text-gray-900"
+                    >
+                      <option value="" className="text-gray-900">-- Seleccionar colegio --</option>
+                      {colegios.map((c) => (
+                        <option key={c.id} value={c.id} className="text-gray-900">{c.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Instructor */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-950 mb-2">Instructor *</label>
+                    <select
+                      value={createForm.instructorId}
+                      onChange={(e) => setCreateForm((f) => ({ ...f, instructorId: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 text-gray-900"
+                    >
+                      <option value="" className="text-gray-900">-- Seleccionar instructor --</option>
+                      {instructores.map((i) => (
+                        <option key={i.id} value={i.id} className="text-gray-900">{i.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Mensajes */}
+                  {createError && (
+                    <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-md p-3 text-sm">
+                      <AlertCircle size={16} />
+                      {createError}
+                    </div>
+                  )}
+                  {createSuccess && (
+                    <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-md p-3 text-sm">
+                      ✓ {createSuccess}
+                    </div>
+                  )}
+
+                  {/* Botones */}
+                  <div className="flex gap-3 pt-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => { setIsCreateModalOpen(false); setCreateError(''); setCreateSuccess(''); }}
+                      disabled={createLoading}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      className="flex-1 bg-green-600 hover:bg-green-700 flex items-center justify-center gap-2"
+                      onClick={handleCreateFicha}
+                      disabled={createLoading || !createForm.numeroFicha || !createForm.jornada || !createForm.colegioId || !createForm.programaId || !createForm.instructorId}
+                    >
+                      <Plus size={16} />
+                      {createLoading ? 'Creando...' : 'Crear Ficha'}
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -436,21 +708,157 @@ export default function FichasPage() {
 
         {/* Edit Ficha Modal */}
         {isEditModalOpen && selectedFicha && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <Card className="w-full max-w-md">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <Card className="w-full max-w-2xl my-8">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-gray-950 font-bold">Editar Ficha</CardTitle>
+                  <CardTitle className="text-xl font-bold text-gray-950">
+                    Editar Ficha {selectedFicha.numeroFicha}
+                  </CardTitle>
                   <Button variant="ghost" size="sm" onClick={() => { setIsEditModalOpen(false); setSelectedFicha(null); }}>
                     <X size={20} />
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600 mb-4">Funcionalidad de edición próximamente.</p>
-                <Button onClick={() => { setIsEditModalOpen(false); setSelectedFicha(null); }} className="w-full bg-green-600 hover:bg-green-700">
-                  Cerrar
-                </Button>
+                <div className="space-y-5">
+                  {/* Número de ficha + Jornada */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-950 mb-2">Número de Ficha *</label>
+                      <Input
+                        value={editForm.numeroFicha}
+                        onChange={(e) => setEditForm((f) => ({ ...f, numeroFicha: e.target.value }))}
+                        placeholder="Ej: 2654321"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-950 mb-2">Jornada *</label>
+                      <select
+                        value={editForm.jornada}
+                        onChange={(e) => setEditForm((f) => ({ ...f, jornada: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 text-gray-900"
+                      >
+                      <option value="MAÑANA" className="text-gray-900">Mañana</option>
+                      <option value="TARDE" className="text-gray-900">Tarde</option>
+                      <option value="NOCHE" className="text-gray-900">Noche</option>
+                      <option value="MIXTA" className="text-gray-900">Mixta</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Estado */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-950 mb-2">Estado</label>
+                    <select
+                      value={editForm.estado}
+                      onChange={(e) => setEditForm((f) => ({ ...f, estado: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 text-gray-900"
+                    >
+                      <option value="ACTIVA" className="text-gray-900">Activa</option>
+                      <option value="EN_CIERRE" className="text-gray-900">En Cierre</option>
+                      <option value="FINALIZADA" className="text-gray-900">Finalizada</option>
+                    </select>
+                  </div>
+
+                  {/* Fechas */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-950 mb-2">Fecha de Inicio</label>
+                      <Input
+                        type="date"
+                        value={editForm.fechaInicio}
+                        onChange={(e) => setEditForm((f) => ({ ...f, fechaInicio: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-950 mb-2">Fecha de Fin</label>
+                      <Input
+                        type="date"
+                        value={editForm.fechaFin}
+                        onChange={(e) => setEditForm((f) => ({ ...f, fechaFin: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Programa */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-950 mb-2">Programa de Formación</label>
+                    <select
+                      value={editForm.programaId}
+                      onChange={(e) => setEditForm((f) => ({ ...f, programaId: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 text-gray-900"
+                    >
+                      <option value="" className="text-gray-900">-- Seleccionar programa --</option>
+                      {programas.map((p) => (
+                        <option key={p.id} value={p.id} className="text-gray-900">{p.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Colegio */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-950 mb-2">Colegio</label>
+                    <select
+                      value={editForm.colegioId}
+                      onChange={(e) => setEditForm((f) => ({ ...f, colegioId: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 text-gray-900"
+                    >
+                      <option value="" className="text-gray-900">-- Seleccionar colegio --</option>
+                      {colegios.map((c) => (
+                        <option key={c.id} value={c.id} className="text-gray-900">{c.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Instructor */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-950 mb-2">Instructor</label>
+                    <select
+                      value={editForm.instructorId}
+                      onChange={(e) => setEditForm((f) => ({ ...f, instructorId: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 text-gray-900"
+                    >
+                      <option value="" className="text-gray-900">-- Seleccionar instructor --</option>
+                      {instructores.map((i) => (
+                        <option key={i.id} value={i.id} className="text-gray-900">{i.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Mensajes */}
+                  {editError && (
+                    <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-md p-3 text-sm">
+                      <AlertCircle size={16} />
+                      {editError}
+                    </div>
+                  )}
+                  {editSuccess && (
+                    <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-md p-3 text-sm">
+                      ✓ {editSuccess}
+                    </div>
+                  )}
+
+                  {/* Botones */}
+                  <div className="flex gap-3 pt-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => { setIsEditModalOpen(false); setSelectedFicha(null); }}
+                      disabled={editLoading}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      className="flex-1 bg-green-600 hover:bg-green-700 flex items-center justify-center gap-2"
+                      onClick={handleUpdateFicha}
+                      disabled={editLoading || !editForm.numeroFicha || !editForm.jornada}
+                    >
+                      <Save size={16} />
+                      {editLoading ? 'Guardando...' : 'Guardar Cambios'}
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
