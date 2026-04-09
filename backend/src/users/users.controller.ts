@@ -8,8 +8,9 @@ import {
   Delete,
   HttpCode,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -33,6 +34,13 @@ export class UsersController {
   async findAll() {
     const users = await this.usersService.findAll();
     return users.map(({ password, ...user }) => user);
+  }
+
+  @Get('instructores')
+  @ApiOperation({ summary: 'Obtener directorio de instructores con datos de perfil' })
+  @ApiQuery({ name: 'dependencia', required: false, description: 'Filtrar por dependencia (Articulacion | Titulada | Complementaria)' })
+  async findInstructores(@Query('dependencia') dependencia?: string) {
+    return this.usersService.findInstructores(dependencia);
   }
 
   @Get(':id')

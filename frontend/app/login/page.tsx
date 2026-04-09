@@ -160,12 +160,41 @@ export default function LoginPage() {
                 </Link>
               </div>
 
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <p className="text-xs text-blue-800 font-medium mb-2">Usuarios de prueba:</p>
-                <div className="text-xs text-blue-700 space-y-1">
-                  <p>• <strong>Admin:</strong> admin@sena.edu.co / Admin123*</p>
-                  <p>• <strong>Instructor:</strong> instructor@sena.edu.co / Instructor123*</p>
-                  <p>• <strong>Coordinador:</strong> coordinador@sena.edu.co / Coordinador123*</p>
+              <div className="mt-4">
+                <p className="text-xs text-gray-400 mb-2 text-center uppercase tracking-wide">Acceso rápido de prueba</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setEmail('admin@sena.edu.co'); setPassword('Admin123!'); }}
+                    className="py-2 px-2 rounded-lg border border-green-200 bg-green-50 hover:bg-green-100 transition-colors text-left"
+                  >
+                    <span className="block text-xs font-semibold text-green-800">Admin</span>
+                    <span className="block text-xs text-green-600">Gestión total</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEmail('coordinador@sena.edu.co'); setPassword('Coordinador123!'); }}
+                    className="py-2 px-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors text-left"
+                  >
+                    <span className="block text-xs font-semibold text-blue-800">Coordinador</span>
+                    <span className="block text-xs text-blue-600">Operativo</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEmail('instructor@sena.edu.co'); setPassword('Instructor123!'); }}
+                    className="py-2 px-2 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors text-left"
+                  >
+                    <span className="block text-xs font-semibold text-amber-800">Instructor</span>
+                    <span className="block text-xs text-amber-600">Módulos propios</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEmail('dev@sena.edu.co'); setPassword('Dev123!'); }}
+                    className="py-2 px-2 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-colors text-left"
+                  >
+                    <span className="block text-xs font-semibold text-purple-800">Desarrollador</span>
+                    <span className="block text-xs text-purple-600">Acceso completo</span>
+                  </button>
                 </div>
               </div>
             </form>

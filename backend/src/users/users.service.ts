@@ -109,4 +109,51 @@ export class UsersService {
     await this.userRepository.restore(id);
     return await this.findOne(id);
   }
+
+  async findInstructores(dependencia?: string): Promise<any[]> {
+    const qb = this.userRepository
+      .createQueryBuilder('u')
+      .where('u.rol = :rol', { rol: UserRole.INSTRUCTOR })
+      .andWhere('u.deletedAt IS NULL')
+      .loadRelationCountAndMap('u.fichasCount', 'u.fichas')
+      .orderBy('u.nombre', 'ASC');
+
+    if (dependencia) {
+      qb.andWhere('u.dependencia = :dependencia', { dependencia });
+    }
+
+    const instructors = await qb.getMany();
+
+    return instructors.map((u) => {
+      const initials = u.nombre
+        .split(' ')
+        .slice(0, 2)
+        .map((w) => w[0]?.toUpperCase() ?? '')
+        .join('');
+
+      return {
+        id: u.id,
+        nombre: u.nombre,
+        email: u.email,
+        documento: u.documento,
+        telefono: u.telefono,
+        fotoPerfil: u.fotoPerfil,
+        activo: u.activo,
+        initials,
+        profesion: u.profesion,
+        dependencia: u.dependencia,
+        area: u.area,
+        tipoPrograma: u.tipoPrograma,
+        sede: u.sede,
+        fechaInicioContrato: u.fechaInicioContrato,
+        fechaFinContrato: u.fechaFinContrato,
+        colegioArticulacion: u.colegioArticulacion,
+        modalidadArticulacion: u.modalidadArticulacion,
+        jornadaArticulacion: u.jornadaArticulacion,
+        localidad: u.localidad,
+        estadoDisponibilidad: u.estadoDisponibilidad,
+        fichasCount: (u as any).fichasCount ?? 0,
+      };
+    });
+  }
 }

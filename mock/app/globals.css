@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 24% 98%;
+    --foreground: 210 20% 18%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 20% 18%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 20% 18%;
+    --primary: 98 100% 33%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 100% 97%;
+    --secondary-foreground: 218 71% 35%;
+    --muted: 210 22% 95%;
+    --muted-foreground: 214 14% 42%;
+    --accent: 184 82% 93%;
+    --accent-foreground: 184 77% 28%;
+    --success: 98 100% 33%;
+    --success-foreground: 150 40% 98%;
+    --warning: 43 96% 52%;
+    --warning-foreground: 30 32% 16%;
+    --danger: 0 72% 52%;
+    --danger-foreground: 0 0% 100%;
+    --border: 214 18% 86%;
+    --input: 214 18% 86%;
+    --ring: 98 100% 33%;
+    --radius: 1rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply min-h-screen bg-background text-foreground antialiased;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(248, 250, 252, 1));
+    font-family: var(--font-sans), sans-serif;
+  }
+
+  ::selection {
+    background: rgba(57, 169, 0, 0.18);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display), serif;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply rounded-[1.35rem] border border-border/80 bg-white shadow-soft;
+  }
+
+  .panel-muted {
+    @apply rounded-[1.2rem] border border-border/80 bg-background;
+  }
+
+  .section-shell {
+    @apply rounded-[1.35rem] border border-border/80 bg-white shadow-soft;
+  }
+
+  .sena-top-strip {
+    background: linear-gradient(90deg, #2f55d4 0%, #17b9cf 65%, #16c0c8 100%);
+  }
+}

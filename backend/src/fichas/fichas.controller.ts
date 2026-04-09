@@ -10,13 +10,18 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { FichasService } from './fichas.service';
 import { CreateFichaDto } from './dto/create-ficha.dto';
@@ -163,20 +168,48 @@ export class FichasController {
   }
 
   @Delete(':id')
-  // @Roles(UserRole.ADMIN) // COMENTADO PARA PRUEBAS
+  // @Roles(UserRole.ADMIN) // COMENTADO PARA PRUEBAS — solo admin puede eliminar
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Eliminar una ficha (soft delete)',
-    description: 'Elimina lógicamente una ficha (solo administradores)',
+    summary: 'Eliminar una ficha (soft delete con auditoría)',
+    description: 'Elimina lógicamente una ficha. Solo administradores. Registra quién eliminó la ficha.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la ficha' })
-  @ApiResponse({
-    status: 204,
-    description: 'Ficha eliminada exitosamente',
-  })
+  @ApiResponse({ status: 204, description: 'Ficha eliminada exitosamente' })
   @ApiResponse({ status: 404, description: 'Ficha no encontrada' })
   @ApiResponse({ status: 403, description: 'Solo administradores pueden eliminar' })
-  remove(@Param('id') id: string): Promise<void> {
-    return this.fichasService.remove(id);
+  remove(
+    @Param('id') id: string,
+    @Query('deletedById') deletedById?: string,
+  ): Promise<void> {
+    return this.fichasService.remove(id, deletedById);
+  }
+
+  @Post(':id/importar-aprendices')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary', description: 'Archivo Excel (.xlsx o .xls)' },
+      },
+    },
+  })
+  @ApiOperation({
+    summary: 'Importar aprendices desde Excel',
+    description:
+      'Recibe un archivo Excel con columnas: nombres, apellidos, tipoDocumento, documento, email, telefono, direccion. Crea automáticamente los usuarios y aprendices.',
+  })
+  @ApiParam({ name: 'id', description: 'UUID de la ficha destino' })
+  @ApiResponse({ status: 201, description: 'Importación procesada' })
+  @ApiResponse({ status: 400, description: 'Archivo inválido o sin datos' })
+  @ApiResponse({ status: 404, description: 'Ficha no encontrada' })
+  importarAprendices(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new Error('No se recibió ningún archivo');
+    return this.fichasService.importarAprendicesDesdeExcel(id, file.buffer);
   }
 }

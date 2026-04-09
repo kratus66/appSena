@@ -17,7 +17,12 @@ export class RolesGuard implements CanActivate {
     }
 
     const { user } = context.switchToHttp().getRequest();
-    
+
+    // El rol desarrollador tiene acceso total a todos los endpoints
+    if (user.rol === UserRole.DESARROLLADOR) {
+      return true;
+    }
+
     const hasRole = requiredRoles.some((role) => user.rol === role);
     
     if (!hasRole) {

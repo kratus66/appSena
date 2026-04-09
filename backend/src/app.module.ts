@@ -18,6 +18,12 @@ import { PtcModule } from './ptc/ptc.module';
 import { AgendaModule } from './agenda/agenda.module';
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { ReportesModule } from './reportes/reportes.module';
+import { AmbientesModule } from './ambientes/ambientes.module';
+import { Ambiente } from './ambientes/entities/ambiente.entity';
+import { AsignacionAmbiente } from './ambientes/entities/asignacion-ambiente.entity';
+import { PlaneacionModule } from './planeacion/planeacion.module';
+import { Planeacion } from './planeacion/entities/planeacion.entity';
+import { PlaneacionHistorial } from './planeacion/entities/planeacion-historial.entity';
 import { User } from './users/entities/user.entity';
 import { Colegio } from './colegios/entities/colegio.entity';
 import { Programa } from './programas/entities/programa.entity';
@@ -51,7 +57,7 @@ import { Notification } from './notificaciones/entities/notification.entity';
         username: configService.get('DB_USERNAME'),
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_DATABASE'),
-        entities: [User, Colegio, Programa, Ficha, Aprendiz, Acudiente, ClaseSesion, Asistencia, DisciplinaryCase, CaseAction, Ptc, PtcItem, Acta, ActaAsistente, CalendarEvent, Reminder, Notification],
+        entities: [User, Colegio, Programa, Ficha, Aprendiz, Acudiente, ClaseSesion, Asistencia, DisciplinaryCase, CaseAction, Ptc, PtcItem, Acta, ActaAsistente, CalendarEvent, Reminder, Notification, Ambiente, AsignacionAmbiente, Planeacion, PlaneacionHistorial],
         synchronize: configService.get('NODE_ENV') === 'development',
         logging: configService.get('NODE_ENV') === 'development',
       }),
@@ -70,6 +76,8 @@ import { Notification } from './notificaciones/entities/notification.entity';
     AgendaModule,
     NotificacionesModule,
     ReportesModule,
+    AmbientesModule,
+    PlaneacionModule,
     UploadModule,
     SeederModule,
   ],

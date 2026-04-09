@@ -8,6 +8,7 @@ import { UsersModule } from '../users/users.module';
 import { FichasModule } from '../fichas/fichas.module';
 import { AprendicesModule } from '../aprendices/aprendices.module';
 import { DisciplinarioModule } from '../disciplinario/disciplinario.module';
+import { AmbientesModule } from '../ambientes/ambientes.module';
 import { CalendarEvent } from '../agenda/entities/calendar-event.entity';
 import { Reminder } from '../agenda/entities/reminder.entity';
 import { User } from '../users/entities/user.entity';
@@ -23,6 +24,7 @@ import { Aprendiz } from '../aprendices/entities/aprendiz.entity';
     FichasModule,
     AprendicesModule,
     DisciplinarioModule,
+    AmbientesModule,
   ],
   providers: [SeederService, AgendaSeeder],
   exports: [SeederService],

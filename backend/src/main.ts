@@ -19,11 +19,16 @@ async function bootstrap() {
       origin: [frontendUrl],
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
-      credentials: false, // No cookies, using localStorage token
+      credentials: false,
     });
   } else {
-    // Development mode - allow all origins
-    app.enableCors();
+    // Development mode - allow all origins explicitly
+    app.enableCors({
+      origin: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      credentials: false,
+    });
   }
 
   // Servir archivos estáticos desde la carpeta uploads

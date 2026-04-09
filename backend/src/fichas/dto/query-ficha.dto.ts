@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsEnum, IsUUID, IsString, IsInt, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { JornadaFicha, EstadoFicha } from '../entities/ficha.entity';
+import { JornadaFicha, EstadoFicha, DependenciaFicha } from '../entities/ficha.entity';
 
 export class QueryFichaDto {
   @ApiPropertyOptional({
@@ -37,14 +37,15 @@ export class QueryFichaDto {
   @IsEnum(EstadoFicha)
   estado?: EstadoFicha;
 
-  @ApiPropertyOptional({
-    description: 'Filtrar por jornada',
-    enum: JornadaFicha,
-    example: 'MAÑANA',
-  })
+  @ApiPropertyOptional({ description: 'Filtrar por jornada', enum: JornadaFicha })
   @IsOptional()
   @IsEnum(JornadaFicha)
   jornada?: JornadaFicha;
+
+  @ApiPropertyOptional({ description: 'Filtrar por dependencia', enum: DependenciaFicha })
+  @IsOptional()
+  @IsEnum(DependenciaFicha)
+  dependencia?: DependenciaFicha;
 
   @ApiPropertyOptional({
     description: 'Buscar por número de ficha (búsqueda parcial)',

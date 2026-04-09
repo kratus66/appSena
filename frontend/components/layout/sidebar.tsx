@@ -8,7 +8,6 @@ import {
   Users,
   GraduationCap,
   School,
-  BookOpen,
   FileText,
   UserCircle,
   LogOut,
@@ -19,6 +18,9 @@ import {
   Shield,
   FilePlus,
   Calendar,
+  BookUser,
+  DoorOpen,
+  GitBranchPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -26,20 +28,25 @@ interface SidebarProps {
   userRole?: string;
 }
 
+const allModules = [
+  { icon: Home, label: 'Dashboard', href: '/dashboard' },
+  { icon: Users, label: 'Usuarios', href: '/dashboard/users' },
+  { icon: BookUser, label: 'Instructores', href: '/dashboard/instructores' },
+  { icon: GraduationCap, label: 'Aprendices', href: '/dashboard/aprendices' },
+  { icon: FileText, label: 'Fichas', href: '/dashboard/fichas' },
+  { icon: DoorOpen, label: 'Ambientes', href: '/dashboard/ambientes' },
+  { icon: GitBranchPlus, label: 'Planeacion', href: '/dashboard/planeacion' },
+  { icon: ClipboardCheck, label: 'Asistencias', href: '/dashboard/asistencias' },
+  { icon: Shield, label: 'Disciplinario', href: '/dashboard/disciplinario' },
+  { icon: FilePlus, label: 'PTC', href: '/dashboard/ptc' },
+  { icon: Calendar, label: 'Agenda', href: '/dashboard/agenda' },
+  { icon: School, label: 'Colegios', href: '/dashboard/colegios' },
+  { icon: BarChart3, label: 'Estadísticas', href: '/dashboard/stats' },
+];
+
 const menuItems = {
-  admin: [
-    { icon: Home, label: 'Dashboard', href: '/dashboard' },
-    { icon: Users, label: 'Usuarios', href: '/dashboard/users' },
-    { icon: GraduationCap, label: 'Aprendices', href: '/dashboard/aprendices' },
-    { icon: FileText, label: 'Fichas', href: '/dashboard/fichas' },
-    { icon: ClipboardCheck, label: 'Asistencias', href: '/dashboard/asistencias' },
-    { icon: Shield, label: 'Disciplinario', href: '/dashboard/disciplinario' },
-    { icon: FilePlus, label: 'PTC', href: '/dashboard/ptc' },
-    { icon: Calendar, label: 'Agenda', href: '/dashboard/agenda' },
-    { icon: School, label: 'Colegios', href: '/dashboard/colegios' },
-    { icon: BookOpen, label: 'Programas', href: '/dashboard/programas' },
-    { icon: BarChart3, label: 'Estadísticas', href: '/dashboard/stats' },
-  ],
+  admin: allModules,
+  desarrollador: allModules,
   instructor: [
     { icon: Home, label: 'Dashboard', href: '/dashboard' },
     { icon: FileText, label: 'Mis Fichas', href: '/dashboard/fichas' },
@@ -51,24 +58,55 @@ const menuItems = {
   ],
   coordinador: [
     { icon: Home, label: 'Dashboard', href: '/dashboard' },
+    { icon: BookUser, label: 'Instructores', href: '/dashboard/instructores' },
     { icon: GraduationCap, label: 'Aprendices', href: '/dashboard/aprendices' },
     { icon: FileText, label: 'Fichas', href: '/dashboard/fichas' },
+    { icon: DoorOpen, label: 'Ambientes', href: '/dashboard/ambientes' },
+    { icon: GitBranchPlus, label: 'Planeacion', href: '/dashboard/planeacion' },
     { icon: ClipboardCheck, label: 'Asistencias', href: '/dashboard/asistencias' },
     { icon: Shield, label: 'Disciplinario', href: '/dashboard/disciplinario' },
     { icon: FilePlus, label: 'PTC', href: '/dashboard/ptc' },
     { icon: Calendar, label: 'Agenda', href: '/dashboard/agenda' },
     { icon: School, label: 'Colegios', href: '/dashboard/colegios' },
-    { icon: BookOpen, label: 'Programas', href: '/dashboard/programas' },
     { icon: BarChart3, label: 'Reportes', href: '/dashboard/stats' },
   ],
 };
 
-export function Sidebar({ userRole = 'admin' }: SidebarProps) {
+function getStoredRole(): string {
+  try {
+    const stored = localStorage.getItem('user');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed.rol) return parsed.rol;
+    }
+  } catch {}
+  return 'admin';
+}
+
+function getStoredEmail(): string {
+  try {
+    const stored = localStorage.getItem('user');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed.email || 'Usuario';
+    }
+  } catch {}
+  return 'Usuario';
+}
+
+export function Sidebar({ userRole }: SidebarProps) {
   const [isMobileOpen, setIsMobileOpen] = React.useState(false);
+  const [role, setRole] = React.useState(userRole || 'admin');
+  const [userEmail, setUserEmail] = React.useState('Usuario');
   const pathname = usePathname();
   const router = useRouter();
 
-  const items = menuItems[userRole as keyof typeof menuItems] || menuItems.admin;
+  React.useEffect(() => {
+    setRole(userRole || getStoredRole());
+    setUserEmail(getStoredEmail());
+  }, [userRole]);
+
+  const items = menuItems[role as keyof typeof menuItems] || menuItems.admin;
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -141,8 +179,8 @@ export function Sidebar({ userRole = 'admin' }: SidebarProps) {
             <div className="flex items-center space-x-3 px-4 py-3">
               <UserCircle size={24} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">Usuario</p>
-                <p className="text-xs text-green-200 truncate capitalize">{userRole}</p>
+                <p className="text-sm font-medium truncate">{userEmail}</p>
+                <p className="text-xs text-green-200 truncate capitalize">{role}</p>
               </div>
             </div>
             <button

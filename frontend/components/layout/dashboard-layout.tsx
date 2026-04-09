@@ -9,7 +9,7 @@ interface DashboardLayoutProps {
   userRole?: string;
 }
 
-export function DashboardLayout({ children, userRole = 'admin' }: DashboardLayoutProps) {
+export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar userRole={userRole} />
