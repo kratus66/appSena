@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { createHash } from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Ptc, PtcEstado } from './entities/ptc.entity';
@@ -18,6 +24,7 @@ import { UpdateActaEstadoDto } from './dto/update-acta-estado.dto';
 import { QueryActaDto } from './dto/query-acta.dto';
 import { CreatePtcFromCaseDto } from './dto/create-ptc-from-case.dto';
 import { User, UserRole } from '../users/entities/user.entity';
+import { canAccessFicha, applyFichaScope } from '../common/utils/ficha-access.util';
 import { FichasService } from '../fichas/fichas.service';
 import { AprendicesService } from '../aprendices/aprendices.service';
 import { DisciplinarioService } from '../disciplinario/disciplinario.service';
@@ -45,7 +52,7 @@ export class PtcService {
   async createPtc(createPtcDto: CreatePtcDto, user: User): Promise<Ptc> {
     // Validar que el aprendiz existe y pertenece a la ficha
     const aprendiz = await this.aprendicesService.findOne(createPtcDto.aprendizId, user);
-    
+
     if (aprendiz.fichaId !== createPtcDto.fichaId) {
       throw new BadRequestException('El aprendiz no pertenece a la ficha especificada');
     }
@@ -146,11 +153,7 @@ export class PtcService {
         'createdBy.email',
       ]);
 
-    // Filtros por rol
-    if (user.rol === UserRole.INSTRUCTOR) {
-      // Solo ver PTCs de sus fichas
-      qb.andWhere('ficha.instructorId = :instructorId', { instructorId: user.id });
-    }
+    applyFichaScope(qb, user, 'ficha');
 
     if (query.fichaId) {
       qb.andWhere('ptc.fichaId = :fichaId', { fichaId: query.fichaId });
@@ -192,7 +195,14 @@ export class PtcService {
   async findOnePtc(id: string, user: User): Promise<Ptc> {
     const ptc = await this.ptcRepository.findOne({
       where: { id },
-      relations: ['ficha', 'aprendiz', 'casoDisciplinario', 'createdBy', 'items', 'items.createdBy'],
+      relations: [
+        'ficha',
+        'aprendiz',
+        'casoDisciplinario',
+        'createdBy',
+        'items',
+        'items.createdBy',
+      ],
     });
 
     if (!ptc) {
@@ -208,7 +218,11 @@ export class PtcService {
   async updatePtc(id: string, updatePtcDto: UpdatePtcDto, user: User): Promise<Ptc> {
     const ptc = await this.findOnePtc(id, user);
 
-    if (ptc.estado !== PtcEstado.BORRADOR && user.rol !== UserRole.COORDINADOR && user.rol !== UserRole.ADMIN) {
+    if (
+      ptc.estado !== PtcEstado.BORRADOR &&
+      user.rol !== UserRole.COORDINADOR &&
+      user.rol !== UserRole.ADMIN
+    ) {
       throw new BadRequestException('Solo se pueden editar PTCs en estado BORRADOR');
     }
 
@@ -276,7 +290,12 @@ export class PtcService {
     return this.ptcItemRepository.save(item);
   }
 
-  async updatePtcItem(ptcId: string, itemId: string, updateItemDto: UpdatePtcItemDto, user: User): Promise<PtcItem> {
+  async updatePtcItem(
+    ptcId: string,
+    itemId: string,
+    updateItemDto: UpdatePtcItemDto,
+    user: User,
+  ): Promise<PtcItem> {
     const ptc = await this.findOnePtc(ptcId, user);
 
     const item = await this.ptcItemRepository.findOne({
@@ -303,7 +322,7 @@ export class PtcService {
     updateEstadoDto: UpdatePtcItemEstadoDto,
     user: User,
   ): Promise<PtcItem> {
-    const ptc = await this.findOnePtc(ptcId, user);
+    await this.findOnePtc(ptcId, user); // Verifica acceso al PTC
 
     const item = await this.ptcItemRepository.findOne({
       where: { id: itemId, ptcId },
@@ -344,7 +363,7 @@ export class PtcService {
   async createActa(createActaDto: CreateActaDto, user: User): Promise<Acta> {
     // Validar que el aprendiz existe y pertenece a la ficha
     const aprendiz = await this.aprendicesService.findOne(createActaDto.aprendizId, user);
-    
+
     if (aprendiz.fichaId !== createActaDto.fichaId) {
       throw new BadRequestException('El aprendiz no pertenece a la ficha especificada');
     }
@@ -392,10 +411,7 @@ export class PtcService {
         'asistentes',
       ]);
 
-    // Filtros por rol
-    if (user.rol === UserRole.INSTRUCTOR) {
-      qb.andWhere('ficha.instructorId = :instructorId', { instructorId: user.id });
-    }
+    applyFichaScope(qb, user, 'ficha');
 
     if (query.fichaId) {
       qb.andWhere('acta.fichaId = :fichaId', { fichaId: query.fichaId });
@@ -469,15 +485,19 @@ export class PtcService {
     // Si se actualizan asistentes, eliminar los anteriores y crear nuevos
     if (asistentes) {
       await this.actaAsistenteRepository.delete({ actaId: id });
-      acta.asistentes = asistentes.map((asis) => 
-        this.actaAsistenteRepository.create({ ...asis, actaId: id })
+      acta.asistentes = asistentes.map((asis) =>
+        this.actaAsistenteRepository.create({ ...asis, actaId: id }),
       );
     }
 
     return this.actaRepository.save(acta);
   }
 
-  async updateActaEstado(id: string, updateEstadoDto: UpdateActaEstadoDto, user: User): Promise<Acta> {
+  async updateActaEstado(
+    id: string,
+    updateEstadoDto: UpdateActaEstadoDto,
+    user: User,
+  ): Promise<Acta> {
     const acta = await this.findOneActa(id, user);
 
     // Solo COORDINADOR y ADMIN pueden cambiar estados
@@ -513,7 +533,9 @@ export class PtcService {
 
     // Validar que el acta esté en estado FIRMABLE o CERRADA
     if (acta.estado === 'BORRADOR') {
-      throw new BadRequestException('El acta debe estar en estado FIRMABLE o CERRADA para subir el PDF firmado');
+      throw new BadRequestException(
+        'El acta debe estar en estado FIRMABLE o CERRADA para subir el PDF firmado',
+      );
     }
 
     // Validar que sea un PDF
@@ -526,10 +548,9 @@ export class PtcService {
 
     // Actualizar el acta con la URL del PDF
     acta.pdfUrl = uploadResult.url;
-    
+
     // Generar hash del archivo para integridad
-    const crypto = require('crypto');
-    const hash = crypto.createHash('sha256').update(file.buffer).digest('hex');
+    const hash = createHash('sha256').update(file.buffer).digest('hex');
     acta.hash = `sha256:${hash}`;
 
     return this.actaRepository.save(acta);
@@ -540,7 +561,7 @@ export class PtcService {
   private async validateFichaPermissions(fichaId: string, user: User): Promise<void> {
     const ficha = await this.fichasService.findOne(fichaId);
 
-    if (user.rol === UserRole.INSTRUCTOR && ficha.instructorId !== user.id) {
+    if (!canAccessFicha(user, ficha)) {
       throw new ForbiddenException('No tienes permisos sobre esta ficha');
     }
   }

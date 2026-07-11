@@ -23,6 +23,7 @@ import {
   GitBranchPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import api from '@/lib/api';
 
 interface SidebarProps {
   userRole?: string;
@@ -80,7 +81,8 @@ function getStoredRole(): string {
       if (parsed.rol) return parsed.rol;
     }
   } catch {}
-  return 'admin';
+  // Sin rol identificable, no asumir admin: nav mínima hasta que se resuelva la sesión.
+  return '';
 }
 
 function getStoredEmail(): string {
@@ -96,7 +98,7 @@ function getStoredEmail(): string {
 
 export function Sidebar({ userRole }: SidebarProps) {
   const [isMobileOpen, setIsMobileOpen] = React.useState(false);
-  const [role, setRole] = React.useState(userRole || 'admin');
+  const [role, setRole] = React.useState(userRole || '');
   const [userEmail, setUserEmail] = React.useState('Usuario');
   const pathname = usePathname();
   const router = useRouter();
@@ -106,10 +108,14 @@ export function Sidebar({ userRole }: SidebarProps) {
     setUserEmail(getStoredEmail());
   }, [userRole]);
 
-  const items = menuItems[role as keyof typeof menuItems] || menuItems.admin;
+  const items = menuItems[role as keyof typeof menuItems] || [];
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
+  const handleLogout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // Si falla la llamada, igual sacamos al usuario del lado del cliente.
+    }
     localStorage.removeItem('user');
     router.push('/login');
   };
@@ -127,7 +133,7 @@ export function Sidebar({ userRole }: SidebarProps) {
       {/* Overlay */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
       )}

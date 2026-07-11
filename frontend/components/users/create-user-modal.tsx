@@ -126,7 +126,7 @@ export function CreateUserModal({ isOpen, onClose, onSuccess, currentUserRole = 
 
   if (allowedRoles.length === 0) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -152,7 +152,7 @@ export function CreateUserModal({ isOpen, onClose, onSuccess, currentUserRole = 
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <Card className="w-full max-w-2xl my-8">
         <CardHeader>
           <div className="flex items-center justify-between">

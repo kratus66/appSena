@@ -8,10 +8,23 @@ import { DisciplinarioService } from '../disciplinario/disciplinario.service';
 import { AmbientesService } from '../ambientes/ambientes.service';
 import { EstadoAmbiente, TipoAmbiente } from '../ambientes/entities/ambiente.entity';
 import { AgendaSeeder } from './agenda-seeder';
-import { DependenciaInstructor, EstadoDisponibilidad, UserRole } from '../users/entities/user.entity';
-import { DependenciaFicha, JornadaFicha, EstadoFicha, ModalidadArticulacion } from '../fichas/entities/ficha.entity';
+import {
+  DependenciaInstructor,
+  EstadoDisponibilidad,
+  UserRole,
+} from '../users/entities/user.entity';
+import {
+  DependenciaFicha,
+  JornadaFicha,
+  EstadoFicha,
+  ModalidadArticulacion,
+} from '../fichas/entities/ficha.entity';
 import { TipoDocumento, EstadoAcademico } from '../aprendices/entities/aprendiz.entity';
-import { CaseTipo, CaseGravedad, CaseEstado } from '../disciplinario/entities/disciplinary-case.entity';
+import {
+  CaseTipo,
+  CaseGravedad,
+  CaseEstado,
+} from '../disciplinario/entities/disciplinary-case.entity';
 import { ActionTipo } from '../disciplinario/entities/case-action.entity';
 
 @Injectable()
@@ -34,6 +47,7 @@ export class SeederService {
 
     await this.seedUsers();
     await this.seedColegios();
+    await this.seedColegioDeCoordinadores();
     await this.seedProgramas();
     await this.seedFichas();
     await this.seedAmbientes();
@@ -401,6 +415,29 @@ export class SeederService {
     }
   }
 
+  private async seedColegioDeCoordinadores() {
+    this.logger.log('Asignando colegio a coordinadores...');
+
+    // COORDINADOR e INSTRUCTOR quedan acotados por colegioId (ver SEC-2 en
+    // docs/PRODUCTION_READINESS.md). El instructor se acota por sus propias
+    // fichas (instructorId), así que solo hace falta asignar colegio a los
+    // coordinadores para que sigan viendo datos tras activar el aislamiento.
+    const colegios = await this.colegiosService.findAll(true);
+    if (colegios.length === 0) {
+      this.logger.warn('No hay colegios para asignar a coordinadores');
+      return;
+    }
+
+    const usuarios = await this.usersService.findAll();
+    const coordinadores = usuarios.filter((u) => u.rol === UserRole.COORDINADOR);
+
+    for (const coordinador of coordinadores) {
+      if (coordinador.colegioId) continue;
+      await this.usersService.update(coordinador.id, { colegioId: colegios[0].id } as any);
+      this.logger.log(`Coordinador ${coordinador.email} asignado a ${colegios[0].nombre}`);
+    }
+  }
+
   private async seedProgramas() {
     this.logger.log('Seeding Programas...');
 
@@ -525,14 +562,14 @@ export class SeederService {
       instructores.find((i) => i.email === email) ?? instructores[0];
 
     const instructorPorPrograma: Record<number, string> = {
-      0: 'instructor@sena.edu.co',         // ADS → Juan Carlos
-      1: 'instructor@sena.edu.co',         // Técnico Sistemas → Juan Carlos
-      2: 'laura.torres@sena.edu.co',       // Contabilidad → Laura
-      3: 'felipe.soto@sena.edu.co',        // Asistencia Adm → Felipe
-      4: 'paola.gomez@sena.edu.co',        // Diseño Gráfico → Paola
-      5: 'andres.vargas@sena.edu.co',      // Cocina → Andrés
-      6: 'carlos.moreno@sena.edu.co',      // Logística → Carlos
-      7: 'ricardo.ruiz@sena.edu.co',       // Electrónica → Ricardo
+      0: 'instructor@sena.edu.co', // ADS → Juan Carlos
+      1: 'instructor@sena.edu.co', // Técnico Sistemas → Juan Carlos
+      2: 'laura.torres@sena.edu.co', // Contabilidad → Laura
+      3: 'felipe.soto@sena.edu.co', // Asistencia Adm → Felipe
+      4: 'paola.gomez@sena.edu.co', // Diseño Gráfico → Paola
+      5: 'andres.vargas@sena.edu.co', // Cocina → Andrés
+      6: 'carlos.moreno@sena.edu.co', // Logística → Carlos
+      7: 'ricardo.ruiz@sena.edu.co', // Electrónica → Ricardo
     };
 
     const fichas = [
@@ -775,7 +812,9 @@ export class SeederService {
         await this.fichasService.create(ficha as any);
         this.logger.log(`Ficha creada: ${ficha.numeroFicha}`);
       } catch (error) {
-        this.logger.warn(`Ficha ya existe o error: ${(ficha as any).numeroFicha} - ${error.message}`);
+        this.logger.warn(
+          `Ficha ya existe o error: ${(ficha as any).numeroFicha} - ${error.message}`,
+        );
       }
     }
   }
@@ -784,41 +823,161 @@ export class SeederService {
     this.logger.log('Seeding Ambientes...');
 
     const adminUsers = await this.usersService.findAll();
-    const admin = adminUsers.find(u => u.rol === UserRole.ADMIN);
-    if (!admin) { this.logger.warn('No se encontró admin para seedAmbientes'); return; }
+    const admin = adminUsers.find((u) => u.rol === UserRole.ADMIN);
+    if (!admin) {
+      this.logger.warn('No se encontró admin para seedAmbientes');
+      return;
+    }
 
     const ambientes = [
       // ── Sede Chapinero ─────────────────────────────────────────────────
-      { nombre: 'Sala 4', sede: 'Chapinero', capacidad: 30, tipo: TipoAmbiente.TITULADA, equipamiento: 'Computadores, Proyector' },
-      { nombre: 'Sala 5', sede: 'Chapinero', capacidad: 30, tipo: TipoAmbiente.TITULADA, equipamiento: 'Computadores, Tablero digital' },
-      { nombre: 'Laboratorio 2', sede: 'Chapinero', capacidad: 28, tipo: TipoAmbiente.TITULADA, equipamiento: 'Computadores, Router, Switch' },
-      { nombre: 'Laboratorio 3', sede: 'Chapinero', capacidad: 25, tipo: TipoAmbiente.TITULADA, equipamiento: 'Computadores, Impresoras' },
-      { nombre: 'Sala TIC 1', sede: 'Chapinero', capacidad: 30, tipo: TipoAmbiente.TITULADA, equipamiento: 'Computadores, Proyector, Internet' },
-      { nombre: 'Ambiente B-12', sede: 'Chapinero', capacidad: 24, tipo: TipoAmbiente.COMPLEMENTARIA, equipamiento: 'Sillas, Tablero' },
-      { nombre: 'Ambiente C-08', sede: 'Chapinero', capacidad: 25, tipo: TipoAmbiente.COMPLEMENTARIA, equipamiento: 'Sillas, Videobeam' },
-      { nombre: 'Aula 101', sede: 'Chapinero', capacidad: 35, tipo: TipoAmbiente.COMPLEMENTARIA, equipamiento: 'Tablero, Sillas universitarias' },
+      {
+        nombre: 'Sala 4',
+        sede: 'Chapinero',
+        capacidad: 30,
+        tipo: TipoAmbiente.TITULADA,
+        equipamiento: 'Computadores, Proyector',
+      },
+      {
+        nombre: 'Sala 5',
+        sede: 'Chapinero',
+        capacidad: 30,
+        tipo: TipoAmbiente.TITULADA,
+        equipamiento: 'Computadores, Tablero digital',
+      },
+      {
+        nombre: 'Laboratorio 2',
+        sede: 'Chapinero',
+        capacidad: 28,
+        tipo: TipoAmbiente.TITULADA,
+        equipamiento: 'Computadores, Router, Switch',
+      },
+      {
+        nombre: 'Laboratorio 3',
+        sede: 'Chapinero',
+        capacidad: 25,
+        tipo: TipoAmbiente.TITULADA,
+        equipamiento: 'Computadores, Impresoras',
+      },
+      {
+        nombre: 'Sala TIC 1',
+        sede: 'Chapinero',
+        capacidad: 30,
+        tipo: TipoAmbiente.TITULADA,
+        equipamiento: 'Computadores, Proyector, Internet',
+      },
+      {
+        nombre: 'Ambiente B-12',
+        sede: 'Chapinero',
+        capacidad: 24,
+        tipo: TipoAmbiente.COMPLEMENTARIA,
+        equipamiento: 'Sillas, Tablero',
+      },
+      {
+        nombre: 'Ambiente C-08',
+        sede: 'Chapinero',
+        capacidad: 25,
+        tipo: TipoAmbiente.COMPLEMENTARIA,
+        equipamiento: 'Sillas, Videobeam',
+      },
+      {
+        nombre: 'Aula 101',
+        sede: 'Chapinero',
+        capacidad: 35,
+        tipo: TipoAmbiente.COMPLEMENTARIA,
+        equipamiento: 'Tablero, Sillas universitarias',
+      },
       // ── Sede Corferias ─────────────────────────────────────────────────
-      { nombre: 'Sala 2', sede: 'Corferias', capacidad: 30, tipo: TipoAmbiente.TITULADA, equipamiento: 'Computadores, Proyector' },
-      { nombre: 'Sala 3', sede: 'Corferias', capacidad: 30, tipo: TipoAmbiente.TITULADA, equipamiento: 'Computadores, Tablero digital' },
-      { nombre: 'Laboratorio 6', sede: 'Corferias', capacidad: 28, tipo: TipoAmbiente.TITULADA, equipamiento: 'Computadores, Servidores' },
-      { nombre: 'Sala TIC 3', sede: 'Corferias', capacidad: 30, tipo: TipoAmbiente.TITULADA, equipamiento: 'Computadores, Internet fibra' },
-      { nombre: 'Ambiente F-03', sede: 'Corferias', capacidad: 24, tipo: TipoAmbiente.COMPLEMENTARIA, equipamiento: 'Sillas, Tablero' },
-      { nombre: 'Ambiente G-09', sede: 'Corferias', capacidad: 25, tipo: TipoAmbiente.COMPLEMENTARIA, equipamiento: 'Mesas, Sillas, Videobeam' },
+      {
+        nombre: 'Sala 2',
+        sede: 'Corferias',
+        capacidad: 30,
+        tipo: TipoAmbiente.TITULADA,
+        equipamiento: 'Computadores, Proyector',
+      },
+      {
+        nombre: 'Sala 3',
+        sede: 'Corferias',
+        capacidad: 30,
+        tipo: TipoAmbiente.TITULADA,
+        equipamiento: 'Computadores, Tablero digital',
+      },
+      {
+        nombre: 'Laboratorio 6',
+        sede: 'Corferias',
+        capacidad: 28,
+        tipo: TipoAmbiente.TITULADA,
+        equipamiento: 'Computadores, Servidores',
+      },
+      {
+        nombre: 'Sala TIC 3',
+        sede: 'Corferias',
+        capacidad: 30,
+        tipo: TipoAmbiente.TITULADA,
+        equipamiento: 'Computadores, Internet fibra',
+      },
+      {
+        nombre: 'Ambiente F-03',
+        sede: 'Corferias',
+        capacidad: 24,
+        tipo: TipoAmbiente.COMPLEMENTARIA,
+        equipamiento: 'Sillas, Tablero',
+      },
+      {
+        nombre: 'Ambiente G-09',
+        sede: 'Corferias',
+        capacidad: 25,
+        tipo: TipoAmbiente.COMPLEMENTARIA,
+        equipamiento: 'Mesas, Sillas, Videobeam',
+      },
       // ── Sede Kennedy ───────────────────────────────────────────────────
-      { nombre: 'Aula 201', sede: 'Kennedy', capacidad: 32, tipo: TipoAmbiente.TITULADA, equipamiento: 'Computadores, Proyector' },
-      { nombre: 'Aula 202', sede: 'Kennedy', capacidad: 32, tipo: TipoAmbiente.TITULADA, equipamiento: 'Computadores, Tablero' },
-      { nombre: 'Lab Electrónica 1', sede: 'Kennedy', capacidad: 20, tipo: TipoAmbiente.TITULADA, equipamiento: 'Osciloscopios, Multímetros, Fuentes de poder' },
-      { nombre: 'Ambiente K-05', sede: 'Kennedy', capacidad: 22, tipo: TipoAmbiente.COMPLEMENTARIA, equipamiento: 'Sillas, Tablero acrílico' },
-      { nombre: 'Ambiente K-06', sede: 'Kennedy', capacidad: 28, tipo: TipoAmbiente.COMPLEMENTARIA, equipamiento: 'Mesas grupales, Videobeam' },
-      { nombre: 'Sala de Diseño', sede: 'Kennedy', capacidad: 25, tipo: TipoAmbiente.TITULADA, equipamiento: 'iMac, Tabletas gráficas, Impresora laser' },
+      {
+        nombre: 'Aula 201',
+        sede: 'Kennedy',
+        capacidad: 32,
+        tipo: TipoAmbiente.TITULADA,
+        equipamiento: 'Computadores, Proyector',
+      },
+      {
+        nombre: 'Aula 202',
+        sede: 'Kennedy',
+        capacidad: 32,
+        tipo: TipoAmbiente.TITULADA,
+        equipamiento: 'Computadores, Tablero',
+      },
+      {
+        nombre: 'Lab Electrónica 1',
+        sede: 'Kennedy',
+        capacidad: 20,
+        tipo: TipoAmbiente.TITULADA,
+        equipamiento: 'Osciloscopios, Multímetros, Fuentes de poder',
+      },
+      {
+        nombre: 'Ambiente K-05',
+        sede: 'Kennedy',
+        capacidad: 22,
+        tipo: TipoAmbiente.COMPLEMENTARIA,
+        equipamiento: 'Sillas, Tablero acrílico',
+      },
+      {
+        nombre: 'Ambiente K-06',
+        sede: 'Kennedy',
+        capacidad: 28,
+        tipo: TipoAmbiente.COMPLEMENTARIA,
+        equipamiento: 'Mesas grupales, Videobeam',
+      },
+      {
+        nombre: 'Sala de Diseño',
+        sede: 'Kennedy',
+        capacidad: 25,
+        tipo: TipoAmbiente.TITULADA,
+        equipamiento: 'iMac, Tabletas gráficas, Impresora laser',
+      },
     ];
 
     for (const amb of ambientes) {
       try {
-        await this.ambientesService.create(
-          { ...amb, estado: EstadoAmbiente.ACTIVO },
-          admin,
-        );
+        await this.ambientesService.create({ ...amb, estado: EstadoAmbiente.ACTIVO }, admin);
         this.logger.log(`Ambiente creado: ${amb.nombre} (${amb.sede})`);
       } catch (error) {
         this.logger.warn(`Ambiente ya existe o error: ${amb.nombre} - ${error.message}`);
@@ -837,7 +996,7 @@ export class SeederService {
       return;
     }
 
-    const adminUser = usuarios.find(u => u.rol === UserRole.ADMIN);
+    const adminUser = usuarios.find((u) => u.rol === UserRole.ADMIN);
     if (!adminUser) {
       this.logger.warn('No se encontró usuario administrador');
       return;
@@ -845,26 +1004,62 @@ export class SeederService {
 
     // Datos base de aprendices para generar variaciones
     const nombresBase = [
-      'Carlos Andrés', 'Laura Melissa', 'Juan Pablo', 'Andrea Valentina',
-      'Miguel Ángel', 'Sofía Carolina', 'David Santiago', 'Camila Alejandra',
-      'Sebastián', 'Valentina', 'Andrés Felipe', 'María José',
-      'Daniel Eduardo', 'Isabella', 'Nicolás', 'Gabriela',
-      'Santiago', 'Daniela', 'Mateo', 'Natalia'
+      'Carlos Andrés',
+      'Laura Melissa',
+      'Juan Pablo',
+      'Andrea Valentina',
+      'Miguel Ángel',
+      'Sofía Carolina',
+      'David Santiago',
+      'Camila Alejandra',
+      'Sebastián',
+      'Valentina',
+      'Andrés Felipe',
+      'María José',
+      'Daniel Eduardo',
+      'Isabella',
+      'Nicolás',
+      'Gabriela',
+      'Santiago',
+      'Daniela',
+      'Mateo',
+      'Natalia',
     ];
 
     const apellidosBase = [
-      'Rodríguez Pérez', 'García Martínez', 'Hernández López', 'Díaz Ramírez',
-      'Torres Sánchez', 'Vargas Castro', 'Rojas Morales', 'Muñoz Silva',
-      'Gómez Ruiz', 'Jiménez Ortiz', 'Moreno Ríos', 'Álvarez Cruz',
-      'Ramírez Vega', 'Castro Molina', 'Méndez Herrera', 'Reyes Parra',
-      'Gutiérrez Ramos', 'Sánchez Peña', 'López Medina', 'Martínez Gómez'
+      'Rodríguez Pérez',
+      'García Martínez',
+      'Hernández López',
+      'Díaz Ramírez',
+      'Torres Sánchez',
+      'Vargas Castro',
+      'Rojas Morales',
+      'Muñoz Silva',
+      'Gómez Ruiz',
+      'Jiménez Ortiz',
+      'Moreno Ríos',
+      'Álvarez Cruz',
+      'Ramírez Vega',
+      'Castro Molina',
+      'Méndez Herrera',
+      'Reyes Parra',
+      'Gutiérrez Ramos',
+      'Sánchez Peña',
+      'López Medina',
+      'Martínez Gómez',
     ];
 
     const direcciones = [
-      'Calle 10 #5-20', 'Carrera 15 #30-45', 'Avenida 68 #25-10',
-      'Calle 20 #7-15', 'Carrera 8 #14-22', 'Calle 45 #12-30',
-      'Carrera 23 #40-11', 'Avenida 19 #50-22', 'Calle 72 #8-35',
-      'Carrera 30 #15-20'
+      'Calle 10 #5-20',
+      'Carrera 15 #30-45',
+      'Avenida 68 #25-10',
+      'Calle 20 #7-15',
+      'Carrera 8 #14-22',
+      'Calle 45 #12-30',
+      'Carrera 23 #40-11',
+      'Avenida 19 #50-22',
+      'Calle 72 #8-35',
+      'Carrera 30 #15-20',
     ];
 
     let docCounter = 1001234567;
@@ -884,7 +1079,7 @@ export class SeederService {
         const email = `aprendiz${docCounter}@sena.edu.co`;
         const telefono = `310${docCounter.toString().slice(-7)}`;
         const direccion = direcciones[aprendizIndex % direcciones.length];
-        
+
         // Distribuir estados académicos (mayoría activos)
         let estadoAcademico = EstadoAcademico.ACTIVO;
         if (i === numAprendices - 1 && Math.random() > 0.7) {
@@ -906,20 +1101,25 @@ export class SeederService {
           });
 
           // Crear el aprendiz con el userId
-          const aprendiz = await this.aprendicesService.create({
-            nombres,
-            apellidos,
-            tipoDocumento,
-            documento,
-            email,
-            telefono,
-            direccion,
-            estadoAcademico,
-            fichaId: ficha.id,
-            userId: userAprendiz.id,
-          }, adminUser);
-          
-          this.logger.log(`Aprendiz creado: ${aprendiz.nombres} ${aprendiz.apellidos} - Ficha: ${ficha.numeroFicha}`);
+          const aprendiz = await this.aprendicesService.create(
+            {
+              nombres,
+              apellidos,
+              tipoDocumento,
+              documento,
+              email,
+              telefono,
+              direccion,
+              estadoAcademico,
+              fichaId: ficha.id,
+              userId: userAprendiz.id,
+            },
+            adminUser,
+          );
+
+          this.logger.log(
+            `Aprendiz creado: ${aprendiz.nombres} ${aprendiz.apellidos} - Ficha: ${ficha.numeroFicha}`,
+          );
         } catch (error) {
           this.logger.warn(`Error creando aprendiz: ${documento} - ${error.message}`);
         }
@@ -939,7 +1139,7 @@ export class SeederService {
     const fichas = await this.fichasService.findAll({});
     const instructor = usuarios.find((u) => u.rol === UserRole.INSTRUCTOR);
     const coordinador = usuarios.find((u) => u.rol === UserRole.COORDINADOR);
-    const adminUser = usuarios.find(u => u.rol === UserRole.ADMIN);
+    const adminUser = usuarios.find((u) => u.rol === UserRole.ADMIN);
 
     if (!instructor || !adminUser || fichas.data.length === 0) {
       this.logger.warn('No hay instructor o fichas para crear casos disciplinarios');

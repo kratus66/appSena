@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { confirmDialog } from '@/components/ui/confirm-dialog';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -136,7 +137,7 @@ export default function PtcActasTab({ ptcId, fichaId, aprendizId }: PtcActasTabP
       CERRADA: '¿Cerrar acta? Esta acción no se puede deshacer.',
     };
 
-    if (!confirm(messages[nuevoEstado as keyof typeof messages])) return;
+    if (!(await confirmDialog(messages[nuevoEstado as keyof typeof messages]))) return;
 
     try {
       await api.patch(`/ptc/actas/${actaId}/estado`, { estado: nuevoEstado });
@@ -148,7 +149,7 @@ export default function PtcActasTab({ ptcId, fichaId, aprendizId }: PtcActasTabP
   };
 
   const handleDelete = async (actaId: string) => {
-    if (!confirm('¿Eliminar esta acta?')) return;
+    if (!(await confirmDialog('¿Eliminar esta acta?'))) return;
 
     try {
       await api.delete(`/ptc/actas/${actaId}`);

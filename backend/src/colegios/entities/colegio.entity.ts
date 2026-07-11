@@ -1,10 +1,9 @@
-import { Entity, Column, OneToMany } from 'typeorm';
+import { Entity, Column } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseEntity } from '../../common/entities/base.entity';
 
 @Entity('colegios')
 export class Colegio extends BaseEntity {
-
   @ApiProperty({ example: 'Institución Educativa San José', description: 'Nombre del colegio' })
   @Column({ type: 'varchar', length: 200 })
   nombre: string;

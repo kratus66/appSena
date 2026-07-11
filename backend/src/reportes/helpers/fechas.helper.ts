@@ -14,13 +14,13 @@ export interface RangoFechas {
  */
 export function mesARango(month: string): RangoFechas {
   const [year, monthNum] = month.split('-').map(Number);
-  
+
   // Primer día del mes a las 00:00:00 UTC
   const desde = new Date(Date.UTC(year, monthNum - 1, 1, 0, 0, 0, 0));
-  
+
   // Último día del mes a las 23:59:59.999 UTC
   const hasta = new Date(Date.UTC(year, monthNum, 0, 23, 59, 59, 999));
-  
+
   return { desde, hasta };
 }
 
@@ -32,11 +32,7 @@ export function mesARango(month: string): RangoFechas {
  * @param month Mes en formato YYYY-MM opcional
  * @returns Objeto con fechas desde y hasta
  */
-export function obtenerRangoFechas(
-  desde?: string,
-  hasta?: string,
-  month?: string,
-): RangoFechas {
+export function obtenerRangoFechas(desde?: string, hasta?: string, month?: string): RangoFechas {
   // Si se proporciona el mes, usarlo
   if (month) {
     return mesARango(month);
@@ -55,7 +51,7 @@ export function obtenerRangoFechas(
   const yearActual = now.getUTCFullYear();
   const mesActual = now.getUTCMonth() + 1;
   const monthActual = `${yearActual}-${mesActual.toString().padStart(2, '0')}`;
-  
+
   return mesARango(monthActual);
 }
 
@@ -88,14 +84,16 @@ export function escapeCsv(value: any): string {
 export function arrayToCsv(data: any[], headers: string[]): string {
   // BOM para que Excel reconozca UTF-8
   const BOM = '\ufeff';
-  
+
   // Header row
   const headerRow = headers.map(escapeCsv).join(',');
-  
+
   // Data rows
-  const dataRows = data.map(row => {
-    return headers.map(header => escapeCsv(row[header])).join(',');
-  }).join('\n');
-  
+  const dataRows = data
+    .map((row) => {
+      return headers.map((header) => escapeCsv(row[header])).join(',');
+    })
+    .join('\n');
+
   return BOM + headerRow + '\n' + dataRows;
 }

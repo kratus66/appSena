@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -89,11 +90,11 @@ export default function NuevoCasoPage() {
     e.preventDefault();
 
     if (!formData.aprendizId) {
-      alert('Debe seleccionar un aprendiz válido del listado');
+      toast.error('Debe seleccionar un aprendiz válido del listado');
       return;
     }
     if (!formData.fichaId) {
-      alert('Debe seleccionar una ficha');
+      toast.error('Debe seleccionar una ficha');
       return;
     }
 
@@ -104,12 +105,12 @@ export default function NuevoCasoPage() {
         fechaIncidente: formData.fechaIncidente,
       };
       await api.post('/disciplinario/casos', payload);
-      alert('Caso creado exitosamente');
+      toast.success('Caso creado exitosamente');
       router.push('/dashboard/disciplinario');
     } catch (error: any) {
       console.error('Error al crear caso:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Error al crear el caso';
-      alert(`Error: ${errorMessage}`);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

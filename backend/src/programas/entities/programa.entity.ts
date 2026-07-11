@@ -1,10 +1,9 @@
-import { Entity, Column, OneToMany } from 'typeorm';
+import { Entity, Column } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseEntity } from '../../common/entities/base.entity';
 
 @Entity('programas')
 export class Programa extends BaseEntity {
-
   @ApiProperty({
     example: 'Tecnólogo en Análisis y Desarrollo de Software',
     description: 'Nombre del programa de formación',

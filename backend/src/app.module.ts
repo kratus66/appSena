@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { LoggerModule } from 'nestjs-pino';
+import { buildLoggerOptions } from './common/logger.config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ColegiosModule } from './colegios/colegios.module';
@@ -25,6 +29,7 @@ import { PlaneacionModule } from './planeacion/planeacion.module';
 import { Planeacion } from './planeacion/entities/planeacion.entity';
 import { PlaneacionHistorial } from './planeacion/entities/planeacion-historial.entity';
 import { User } from './users/entities/user.entity';
+import { PerfilInstructor } from './users/entities/perfil-instructor.entity';
 import { Colegio } from './colegios/entities/colegio.entity';
 import { Programa } from './programas/entities/programa.entity';
 import { Ficha } from './fichas/entities/ficha.entity';
@@ -48,6 +53,14 @@ import { Notification } from './notificaciones/entities/notification.entity';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    LoggerModule.forRoot(buildLoggerOptions()),
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60_000,
+        limit: 120,
+      },
+    ]),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -57,8 +70,40 @@ import { Notification } from './notificaciones/entities/notification.entity';
         username: configService.get('DB_USERNAME'),
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_DATABASE'),
-        entities: [User, Colegio, Programa, Ficha, Aprendiz, Acudiente, ClaseSesion, Asistencia, DisciplinaryCase, CaseAction, Ptc, PtcItem, Acta, ActaAsistente, CalendarEvent, Reminder, Notification, Ambiente, AsignacionAmbiente, Planeacion, PlaneacionHistorial],
-        synchronize: configService.get('NODE_ENV') === 'development',
+        entities: [
+          User,
+          PerfilInstructor,
+          Colegio,
+          Programa,
+          Ficha,
+          Aprendiz,
+          Acudiente,
+          ClaseSesion,
+          Asistencia,
+          DisciplinaryCase,
+          CaseAction,
+          Ptc,
+          PtcItem,
+          Acta,
+          ActaAsistente,
+          CalendarEvent,
+          Reminder,
+          Notification,
+          Ambiente,
+          AsignacionAmbiente,
+          Planeacion,
+          PlaneacionHistorial,
+        ],
+        // El esquema es responsabilidad exclusiva de las migraciones
+        // (src/database/migrations). Nunca auto-sincronizar: evita el drift
+        // entre lo que TypeORM infiere de las entidades y lo que realmente
+        // hay en la base de datos.
+        synchronize: false,
+        migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
+        // Correr migraciones automáticamente al arrancar solo si se pide
+        // explícitamente (ej. despliegue de una sola instancia). En local se
+        // corren con `npm run migration:run`.
+        migrationsRun: configService.get('DB_MIGRATIONS_RUN') === 'true',
         logging: configService.get('NODE_ENV') === 'development',
       }),
       inject: [ConfigService],
@@ -82,6 +127,12 @@ import { Notification } from './notificaciones/entities/notification.entity';
     SeederModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

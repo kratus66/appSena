@@ -36,14 +36,14 @@ import { GetUser } from '../auth/decorators/get-user.decorator';
 import { User, UserRole } from '../users/entities/user.entity';
 
 @ApiTags('Fichas')
-/* @ApiBearerAuth() */
+@ApiBearerAuth()
 @Controller('fichas')
-// @UseGuards(JwtAuthGuard, RolesGuard) // COMENTADO PARA PRUEBAS
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class FichasController {
   constructor(private readonly fichasService: FichasService) {}
 
   @Post()
-  // @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR) // COMENTADO PARA PRUEBAS
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
   @ApiOperation({
     summary: 'Crear una nueva ficha',
     description: 'Permite a instructores y administradores crear una nueva ficha',
@@ -57,14 +57,12 @@ export class FichasController {
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
   @ApiResponse({ status: 403, description: 'Sin permisos' })
-  create(
-    @Body() createFichaDto: CreateFichaDto,
-  ): Promise<Ficha> {
+  create(@Body() createFichaDto: CreateFichaDto): Promise<Ficha> {
     return this.fichasService.create(createFichaDto);
   }
 
   @Get()
-  // @Roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.INSTRUCTOR) // COMENTADO PARA PRUEBAS
+  @Roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.INSTRUCTOR)
   @ApiOperation({
     summary: 'Listar todas las fichas',
     description:
@@ -74,26 +72,26 @@ export class FichasController {
     status: 200,
     description: 'Lista de fichas obtenida exitosamente',
   })
-  findAll(@Query() queryDto: QueryFichaDto) {
-    return this.fichasService.findAll(queryDto);
+  findAll(@Query() queryDto: QueryFichaDto, @GetUser() user: User) {
+    return this.fichasService.findAll(queryDto, user);
   }
 
   @Get('mias')
-  /* @Roles(UserRole.INSTRUCTOR) */
+  @Roles(UserRole.INSTRUCTOR)
   @ApiOperation({
     summary: 'Listar mis fichas',
-    description: 'Obtiene solo las fichas del instructor. Para pruebas sin auth, pasar instructorId como query parameter.',
+    description: 'Obtiene solo las fichas del instructor autenticado.',
   })
   @ApiResponse({
     status: 200,
     description: 'Lista de fichas del instructor',
   })
-  findMine(@Query() queryDto: QueryFichaDto) {
-    return this.fichasService.findMine(queryDto);
+  findMine(@Query() queryDto: QueryFichaDto, @GetUser() user: User) {
+    return this.fichasService.findMine(queryDto, user);
   }
 
   @Get('agrupadas')
-  // @Roles(UserRole.ADMIN, UserRole.COORDINADOR) // COMENTADO PARA PRUEBAS
+  @Roles(UserRole.ADMIN, UserRole.COORDINADOR)
   @ApiOperation({
     summary: 'Listar fichas agrupadas por colegio y programa',
     description: 'Obtiene fichas agrupadas jerárquicamente (solo coordinadores y admin)',
@@ -102,12 +100,12 @@ export class FichasController {
     status: 200,
     description: 'Fichas agrupadas exitosamente',
   })
-  findGrouped(@Query() queryDto: QueryFichaDto) {
-    return this.fichasService.findGrouped(queryDto);
+  findGrouped(@Query() queryDto: QueryFichaDto, @GetUser() user: User) {
+    return this.fichasService.findGrouped(queryDto, user);
   }
 
   @Get(':id')
-  // @Roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.INSTRUCTOR) // COMENTADO PARA PRUEBAS
+  @Roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.INSTRUCTOR)
   @ApiOperation({
     summary: 'Obtener una ficha por ID',
     description: 'Obtiene el detalle de una ficha específica',
@@ -120,12 +118,12 @@ export class FichasController {
   })
   @ApiResponse({ status: 404, description: 'Ficha no encontrada' })
   @ApiResponse({ status: 403, description: 'Sin permisos para ver esta ficha' })
-  findOne(@Param('id') id: string): Promise<Ficha> {
-    return this.fichasService.findOne(id);
+  findOne(@Param('id') id: string, @GetUser() user: User): Promise<Ficha> {
+    return this.fichasService.findOne(id, user);
   }
 
   @Patch(':id')
-  // @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR) // COMENTADO PARA PRUEBAS
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
   @ApiOperation({
     summary: 'Actualizar una ficha',
     description: 'Permite actualizar datos de una ficha (instructores solo sus fichas)',
@@ -142,12 +140,13 @@ export class FichasController {
   update(
     @Param('id') id: string,
     @Body() updateFichaDto: UpdateFichaDto,
+    @GetUser() user: User,
   ): Promise<Ficha> {
-    return this.fichasService.update(id, updateFichaDto);
+    return this.fichasService.update(id, updateFichaDto, user);
   }
 
   @Patch(':id/estado')
-  // @Roles(UserRole.ADMIN, UserRole.COORDINADOR) // COMENTADO PARA PRUEBAS
+  @Roles(UserRole.ADMIN, UserRole.COORDINADOR)
   @ApiOperation({
     summary: 'Actualizar el estado de una ficha',
     description: 'Permite cambiar el estado de una ficha (solo coordinadores y admin)',
@@ -163,29 +162,29 @@ export class FichasController {
   updateEstado(
     @Param('id') id: string,
     @Body() updateEstadoDto: UpdateFichaEstadoDto,
+    @GetUser() user: User,
   ): Promise<Ficha> {
-    return this.fichasService.updateEstado(id, updateEstadoDto);
+    return this.fichasService.updateEstado(id, updateEstadoDto, user);
   }
 
   @Delete(':id')
-  // @Roles(UserRole.ADMIN) // COMENTADO PARA PRUEBAS — solo admin puede eliminar
+  @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Eliminar una ficha (soft delete con auditoría)',
-    description: 'Elimina lógicamente una ficha. Solo administradores. Registra quién eliminó la ficha.',
+    description:
+      'Elimina lógicamente una ficha. Solo administradores. Registra quién eliminó la ficha.',
   })
   @ApiParam({ name: 'id', description: 'UUID de la ficha' })
   @ApiResponse({ status: 204, description: 'Ficha eliminada exitosamente' })
   @ApiResponse({ status: 404, description: 'Ficha no encontrada' })
   @ApiResponse({ status: 403, description: 'Solo administradores pueden eliminar' })
-  remove(
-    @Param('id') id: string,
-    @Query('deletedById') deletedById?: string,
-  ): Promise<void> {
-    return this.fichasService.remove(id, deletedById);
+  remove(@Param('id') id: string, @GetUser() user: User): Promise<void> {
+    return this.fichasService.remove(id, user.id);
   }
 
   @Post(':id/importar-aprendices')
+  @Roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.INSTRUCTOR)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -208,8 +207,9 @@ export class FichasController {
   importarAprendices(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
+    @GetUser() user: User,
   ) {
     if (!file) throw new Error('No se recibió ningún archivo');
-    return this.fichasService.importarAprendicesDesdeExcel(id, file.buffer);
+    return this.fichasService.importarAprendicesDesdeExcel(id, file.buffer, user);
   }
 }

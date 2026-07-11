@@ -98,16 +98,33 @@ export class CreateAprendizDto {
     default: EstadoAcademico.ACTIVO,
   })
   @IsOptional()
-  @IsEnum(EstadoAcademico, { message: 'El estado académico debe ser ACTIVO, DESERTOR, RETIRADO o SUSPENDIDO' })
+  @IsEnum(EstadoAcademico, {
+    message: 'El estado académico debe ser ACTIVO, DESERTOR, RETIRADO o SUSPENDIDO',
+  })
   estadoAcademico?: EstadoAcademico;
 
   @ApiProperty({
     example: 'uuid-user',
-    description: 'ID del usuario asociado al aprendiz',
+    description:
+      'ID de un usuario existente a vincular. Si se omite, el backend crea (o reutiliza por documento) un usuario con rol aprendiz automáticamente.',
+    required: false,
   })
+  @IsOptional()
   @IsUUID('4', { message: 'El userId debe ser un UUID válido' })
-  @IsNotEmpty({ message: 'El userId es requerido' })
-  userId: string;
+  userId?: string;
+
+  @ApiProperty({
+    example: 'Cambiar123',
+    description:
+      'Contraseña para el usuario que se creará (solo si no se envía userId). Si se omite, se usa el documento como contraseña inicial.',
+    required: false,
+    minLength: 6,
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
+  @MaxLength(72, { message: 'La contraseña no puede tener más de 72 caracteres' })
+  password?: string;
 
   @ApiProperty({
     example: 'uuid-ficha',

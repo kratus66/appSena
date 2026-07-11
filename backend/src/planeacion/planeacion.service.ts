@@ -7,7 +7,11 @@ import { CreatePlaneacionDto } from './dto/create-planeacion.dto';
 import { UpdatePlaneacionDto } from './dto/update-planeacion.dto';
 import { User } from '../users/entities/user.entity';
 import { Ficha } from '../fichas/entities/ficha.entity';
-import { AsignacionAmbiente, DiaSemana, JornadaBloque } from '../ambientes/entities/asignacion-ambiente.entity';
+import {
+  AsignacionAmbiente,
+  DiaSemana,
+  JornadaBloque,
+} from '../ambientes/entities/asignacion-ambiente.entity';
 
 // Maps "LUN MANANA" -> { dia: DiaSemana.LUN, jornada: JornadaBloque.MANANA }
 function parseBlock(block: string): { dia: DiaSemana; jornada: JornadaBloque } | null {
@@ -99,7 +103,6 @@ export class PlaneacionService {
     await this.fichaRepo.update(fichaId, { instructorId: null, ambiente: null });
   }
 
-
   async create(dto: CreatePlaneacionDto, user: User): Promise<Planeacion> {
     const planeacion = this.planeacionRepo.create({
       ...dto,
@@ -112,8 +115,19 @@ export class PlaneacionService {
     const saved = await this.planeacionRepo.save(planeacion);
 
     // ── Sync: mark ambiente blocks as Ocupado ────────────────────────────
-    if (dto.ambienteId && dto.bloques?.length && dto.dependencia !== DependenciaPlaneacion.ARTICULACION) {
-      await this.createAsignaciones(dto.ambienteId, dto.fichaId, dto.instructorId, dto.bloques, dto.notas, user);
+    if (
+      dto.ambienteId &&
+      dto.bloques?.length &&
+      dto.dependencia !== DependenciaPlaneacion.ARTICULACION
+    ) {
+      await this.createAsignaciones(
+        dto.ambienteId,
+        dto.fichaId,
+        dto.instructorId,
+        dto.bloques,
+        dto.notas,
+        user,
+      );
     }
 
     // ── Sync: update ficha with instructor + ambiente ────────────────────
@@ -128,7 +142,7 @@ export class PlaneacionService {
     const summary =
       dto.dependencia === DependenciaPlaneacion.ARTICULACION
         ? `Se confirmo cobertura con ${dto.schoolName ?? 'colegio pendiente'} en modalidad ${(dto.modalidad ?? 'Compartida').toLowerCase()}.`
-        : `Se programo ${dto.ambienteNombre ?? 'ambiente'} en ${(dto.bloques?.length ?? 0)} bloques.`;
+        : `Se programo ${dto.ambienteNombre ?? 'ambiente'} en ${dto.bloques?.length ?? 0} bloques.`;
 
     await this.historialRepo.save(
       this.historialRepo.create({
@@ -181,8 +195,7 @@ export class PlaneacionService {
 
   async update(id: string, dto: UpdatePlaneacionDto, user: User): Promise<Planeacion> {
     const planeacion = await this.findOne(id);
-    const isReasignacion =
-      dto.instructorId && dto.instructorId !== planeacion.instructorId;
+    const isReasignacion = dto.instructorId && dto.instructorId !== planeacion.instructorId;
 
     // ── Sync: remove old ambiente blocks if ambiente or blocks changed ────
     const oldAmbienteId = planeacion.ambienteId;
@@ -190,7 +203,11 @@ export class PlaneacionService {
     const newAmbienteId = dto.ambienteId ?? planeacion.ambienteId;
     const newBloques = dto.bloques ?? planeacion.bloques ?? [];
 
-    if (oldAmbienteId && oldBloques.length && planeacion.dependencia !== DependenciaPlaneacion.ARTICULACION) {
+    if (
+      oldAmbienteId &&
+      oldBloques.length &&
+      planeacion.dependencia !== DependenciaPlaneacion.ARTICULACION
+    ) {
       await this.removeAsignaciones(oldAmbienteId, oldBloques);
     }
 
@@ -202,7 +219,11 @@ export class PlaneacionService {
     const saved = await this.planeacionRepo.save(planeacion);
 
     // ── Sync: create new ambiente blocks ─────────────────────────────────
-    if (newAmbienteId && newBloques.length && saved.dependencia !== DependenciaPlaneacion.ARTICULACION) {
+    if (
+      newAmbienteId &&
+      newBloques.length &&
+      saved.dependencia !== DependenciaPlaneacion.ARTICULACION
+    ) {
       await this.createAsignaciones(
         newAmbienteId,
         dto.fichaId ?? saved.fichaId,
@@ -251,7 +272,11 @@ export class PlaneacionService {
     const planeacion = await this.findOne(id);
 
     // ── Sync: free ambiente blocks ────────────────────────────────────────
-    if (planeacion.ambienteId && (planeacion.bloques ?? []).length && planeacion.dependencia !== DependenciaPlaneacion.ARTICULACION) {
+    if (
+      planeacion.ambienteId &&
+      (planeacion.bloques ?? []).length &&
+      planeacion.dependencia !== DependenciaPlaneacion.ARTICULACION
+    ) {
       await this.removeAsignaciones(planeacion.ambienteId, planeacion.bloques);
     }
 

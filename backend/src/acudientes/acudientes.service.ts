@@ -25,8 +25,8 @@ export class AcudientesService {
     createAcudienteDto: CreateAcudienteDto,
     user: User,
   ): Promise<Acudiente> {
-    // Verificar que el aprendiz existe y el usuario tiene permiso
-    const aprendiz = await this.aprendicesService.findOne(aprendizId, user);
+    // Verificar que el aprendiz existe y el usuario tiene permiso (lanza si no)
+    await this.aprendicesService.findOne(aprendizId, user);
 
     // Verificar que no exista otro acudiente con el mismo teléfono para este aprendiz
     const existingAcudiente = await this.acudienteRepository.findOne({
@@ -80,11 +80,7 @@ export class AcudientesService {
     return acudiente;
   }
 
-  async update(
-    id: string,
-    updateAcudienteDto: UpdateAcudienteDto,
-    user: User,
-  ): Promise<Acudiente> {
+  async update(id: string, updateAcudienteDto: UpdateAcudienteDto, user: User): Promise<Acudiente> {
     const acudiente = await this.findOne(id, user);
 
     // Si se está actualizando el teléfono, verificar que no exista otro acudiente con el mismo teléfono para este aprendiz

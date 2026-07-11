@@ -44,7 +44,7 @@ AppSena/
 │   │   ├── database/           # Seeders de datos iniciales
 │   │   ├── disciplinario/      # Módulo: proceso disciplinario
 │   │   ├── fichas/             # Módulo: fichas de formación ← MODULO PRINCIPAL
-│   │   ├── notificaciones/     # Módulo: notificaciones en tiempo real
+│   │   ├── notificaciones/     # Módulo: notificaciones (frontend hace polling c/30s)
 │   │   ├── programas/          # Módulo: programas de formación SENA
 │   │   ├── ptc/                # Módulo: plan de trabajo del cuatrimestre
 │   │   ├── reportes/           # Módulo: generación de reportes
@@ -98,9 +98,9 @@ Usuario → POST /api/auth/login
          → Guards NestJS verifican JWT y Rol en cada endpoint
 ```
 
-- El token incluye: `{ sub: userId, email, nombre, rol }`
-- Los guards `JwtAuthGuard` y `RolesGuard` están **comentados en desarrollo** para facilitar pruebas sin autenticación
-- En producción, todos los endpoints deben tener sus guards activos
+- El token incluye: `{ sub: userId, email, rol, tokenVersion }`
+- Los guards `JwtAuthGuard` y `RolesGuard` están **activos en todos los controladores** (tanto en desarrollo como en producción). Las excepciones públicas se marcan explícitamente (ej. `POST /auth/login`)
+- `tokenVersion` permite revocar sesiones: al cerrar sesión se incrementa y los tokens previos dejan de ser válidos aunque su firma siga vigente
 
 ---
 
@@ -109,9 +109,14 @@ Usuario → POST /api/auth/login
 | Rol | Valor en DB | Permisos principales |
 |-----|-------------|---------------------|
 | Administrador | `admin` | Acceso total, puede eliminar fichas |
-| Coordinador | `coordinador` | Ve todas las fichas, gestiona colegios |
-| Instructor | `instructor` | Solo sus fichas y aprendices |
-| Aprendiz | `aprendiz` | Solo lectura de su información |
+| Coordinador | `coordinador` | Acotado a su colegio (`colegioId`): fichas, aprendices y recursos de ese colegio |
+| Instructor | `instructor` | Acotado a **sus** fichas y a los aprendices de ellas |
+| Aprendiz | `aprendiz` | Cuenta generada automáticamente; hoy no se usa para login (ver nota abajo) |
+| Desarrollador | `desarrollador` | Rol de plataforma: acceso sin restricción de colegio/ficha (como `admin`) |
+
+> **Alcance de datos:** `admin` y `desarrollador` son *roles de plataforma* (sin restricción). `coordinador` e `instructor` quedan acotados por colegio/ficha vía `common/utils/ficha-access.util.ts`.
+>
+> **Aprendiz:** al crear un aprendiz se genera un `User` con rol `aprendiz`, pero los aprendices no inician sesión en la plataforma. Está pendiente consolidar este modelo (eliminar el usuario espejo).
 
 ---
 
@@ -141,8 +146,13 @@ DB_PORT=5432
 DB_USERNAME=postgres
 DB_PASSWORD=Colombia123
 DB_DATABASE=appsena
+# El esquema lo gestionan las migraciones (synchronize desactivado).
+# true = aplicar migraciones al arrancar; en local se corren con `npm run migration:run`.
+DB_MIGRATIONS_RUN=false
 NODE_ENV=development
-JWT_SECRET=your-secret-key
+# JWT_SECRET debe tener 32+ caracteres — la app falla al arrancar si es más corto o falta
+JWT_SECRET=cambia-esto-por-una-cadena-larga-y-aleatoria-de-32-mas
+JWT_EXPIRATION=24h
 FRONTEND_URL=http://localhost:3001
 ```
 

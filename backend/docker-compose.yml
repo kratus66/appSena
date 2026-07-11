@@ -1,3 +1,8 @@
+# ⚠️ Solo para desarrollo local. NO reutilizar este archivo tal cual en un
+# servidor expuesto a internet: las credenciales por defecto de postgres
+# (postgres/postgres) y pgAdmin (admin/admin) son intencionalmente débiles
+# para facilitar el arranque local. El despliegue real usa Lightsail + RDS
+# con variables propias — ver docs/DEPLOY_LIGHTSAIL_RDS.md.
 version: '3.8'
 
 services:

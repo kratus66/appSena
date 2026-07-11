@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsBoolean, IsString, ValidateIf, IsOptional, MaxLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsBoolean,
+  IsString,
+  ValidateIf,
+  IsOptional,
+  MaxLength,
+} from 'class-validator';
 
 export class JustificarAsistenciaDto {
   @ApiProperty({

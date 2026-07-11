@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useRouter, useParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { api } from '@/lib/api';
@@ -87,7 +88,7 @@ export default function RegistrarAsistenciaPage() {
       await api.post(`/asistencias/sesiones/${sesionId}/registrar`, dto);
       router.push('/dashboard/asistencias');
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al registrar asistencias');
+      toast.error(error.response?.data?.message || 'Error al registrar asistencias');
     } finally {
       setSaving(false);
     }

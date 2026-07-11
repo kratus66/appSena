@@ -7,9 +7,7 @@ import {
   Param,
   Delete,
   Query,
-  ParseIntPipe,
-  HttpCode,
-  HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,18 +15,26 @@ import {
   ApiResponse,
   ApiQuery,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ColegiosService } from './colegios.service';
 import { CreateColegioDto } from './dto/create-colegio.dto';
 import { UpdateColegioDto } from './dto/update-colegio.dto';
 import { Colegio } from './entities/colegio.entity';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
 
 @ApiTags('Colegios')
+@ApiBearerAuth()
 @Controller('colegios')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ColegiosController {
   constructor(private readonly colegiosService: ColegiosService) {}
 
   @Post()
+  @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Crear un nuevo colegio',
     description: 'Registra un nuevo colegio en el sistema (HU-CO-01)',
@@ -45,9 +51,11 @@ export class ColegiosController {
   }
 
   @Get()
+  @Roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.INSTRUCTOR)
   @ApiOperation({
     summary: 'Listar todos los colegios',
-    description: 'Obtiene la lista de colegios, opcionalmente filtrados por estado activo (HU-CO-02)',
+    description:
+      'Obtiene la lista de colegios, opcionalmente filtrados por estado activo (HU-CO-02)',
   })
   @ApiQuery({
     name: 'activo',
@@ -66,6 +74,7 @@ export class ColegiosController {
   }
 
   @Get('departamento/:departamento')
+  @Roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.INSTRUCTOR)
   @ApiOperation({
     summary: 'Buscar colegios por departamento',
     description: 'Obtiene todos los colegios activos de un departamento específico',
@@ -81,6 +90,7 @@ export class ColegiosController {
   }
 
   @Get('ciudad/:ciudad')
+  @Roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.INSTRUCTOR)
   @ApiOperation({
     summary: 'Buscar colegios por ciudad',
     description: 'Obtiene todos los colegios activos de una ciudad específica',
@@ -96,6 +106,7 @@ export class ColegiosController {
   }
 
   @Get(':id')
+  @Roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.INSTRUCTOR)
   @ApiOperation({
     summary: 'Obtener un colegio por ID',
     description: 'Obtiene la información detallada de un colegio específico',
@@ -112,6 +123,7 @@ export class ColegiosController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Actualizar un colegio',
     description: 'Actualiza la información de un colegio existente',
@@ -124,14 +136,12 @@ export class ColegiosController {
   })
   @ApiResponse({ status: 404, description: 'Colegio no encontrado' })
   @ApiResponse({ status: 409, description: 'Ya existe un colegio con ese NIT' })
-  update(
-    @Param('id') id: string,
-    @Body() updateColegioDto: UpdateColegioDto,
-  ): Promise<Colegio> {
+  update(@Param('id') id: string, @Body() updateColegioDto: UpdateColegioDto): Promise<Colegio> {
     return this.colegiosService.update(id, updateColegioDto);
   }
 
   @Patch(':id/toggle-activo')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Activar/Desactivar un colegio',
     description: 'Cambia el estado activo de un colegio',
@@ -148,6 +158,7 @@ export class ColegiosController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Eliminar un colegio',
     description: 'Elimina permanentemente un colegio del sistema',
@@ -158,7 +169,7 @@ export class ColegiosController {
   async remove(@Param('id') id: string) {
     await this.colegiosService.remove(id);
     return {
-      message: 'Colegio eliminado exitosamente sfsfsfsdfsd',
+      message: 'Colegio eliminado exitosamente',
       id,
     };
   }

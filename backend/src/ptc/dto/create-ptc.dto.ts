@@ -1,6 +1,5 @@
-import { IsString, IsUUID, IsOptional, IsDateString, MaxLength, IsNotEmpty, IsEnum } from 'class-validator';
+import { IsString, IsUUID, IsOptional, IsDateString, MaxLength, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { PtcEstado } from '../entities/ptc.entity';
 
 export class CreatePtcDto {
   @ApiProperty({

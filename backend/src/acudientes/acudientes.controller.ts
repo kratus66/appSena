@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AcudientesService } from './acudientes.service';
 import { CreateAcudienteDto } from './dto/create-acudiente.dto';
@@ -30,7 +21,10 @@ export class AcudientesController {
   @ApiOperation({ summary: 'Crear un nuevo acudiente para un aprendiz' })
   @ApiResponse({ status: 201, description: 'Acudiente creado exitosamente' })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
-  @ApiResponse({ status: 409, description: 'Ya existe un acudiente con el mismo teléfono para este aprendiz' })
+  @ApiResponse({
+    status: 409,
+    description: 'Ya existe un acudiente con el mismo teléfono para este aprendiz',
+  })
   create(
     @Param('aprendizId') aprendizId: string,
     @Body() createAcudienteDto: CreateAcudienteDto,
@@ -43,10 +37,7 @@ export class AcudientesController {
   @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR, UserRole.COORDINADOR)
   @ApiOperation({ summary: 'Listar todos los acudientes de un aprendiz' })
   @ApiResponse({ status: 200, description: 'Lista de acudientes obtenida exitosamente' })
-  findAll(
-    @Param('aprendizId') aprendizId: string,
-    @GetUser() user: User,
-  ) {
+  findAll(@Param('aprendizId') aprendizId: string, @GetUser() user: User) {
     return this.acudientesService.findAllByAprendiz(aprendizId, user);
   }
 
@@ -55,10 +46,7 @@ export class AcudientesController {
   @ApiOperation({ summary: 'Obtener detalle de un acudiente' })
   @ApiResponse({ status: 200, description: 'Detalle del acudiente obtenido exitosamente' })
   @ApiResponse({ status: 404, description: 'Acudiente no encontrado' })
-  findOne(
-    @Param('id') id: string,
-    @GetUser() user: User,
-  ) {
+  findOne(@Param('id') id: string, @GetUser() user: User) {
     return this.acudientesService.findOne(id, user);
   }
 
@@ -67,7 +55,10 @@ export class AcudientesController {
   @ApiOperation({ summary: 'Actualizar datos de un acudiente' })
   @ApiResponse({ status: 200, description: 'Acudiente actualizado exitosamente' })
   @ApiResponse({ status: 404, description: 'Acudiente no encontrado' })
-  @ApiResponse({ status: 409, description: 'Ya existe un acudiente con el mismo teléfono para este aprendiz' })
+  @ApiResponse({
+    status: 409,
+    description: 'Ya existe un acudiente con el mismo teléfono para este aprendiz',
+  })
   update(
     @Param('id') id: string,
     @Body() updateAcudienteDto: UpdateAcudienteDto,
@@ -82,10 +73,7 @@ export class AcudientesController {
   @ApiResponse({ status: 200, description: 'Acudiente eliminado exitosamente' })
   @ApiResponse({ status: 403, description: 'No tienes permisos para eliminar acudientes' })
   @ApiResponse({ status: 404, description: 'Acudiente no encontrado' })
-  remove(
-    @Param('id') id: string,
-    @GetUser() user: User,
-  ) {
+  remove(@Param('id') id: string, @GetUser() user: User) {
     return this.acudientesService.remove(id, user);
   }
 }

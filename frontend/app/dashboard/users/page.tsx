@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { SkeletonTable } from '@/components/ui/skeleton';
+import toast from 'react-hot-toast';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -121,7 +123,7 @@ export default function UsersPage() {
       fetchUsers();
     } catch (error: any) {
       console.error('Error deleting user:', error);
-      alert(error.response?.data?.message || 'Error al eliminar el usuario');
+      toast.error(error.response?.data?.message || 'Error al eliminar el usuario');
     }
   };
 
@@ -203,7 +205,7 @@ export default function UsersPage() {
 
         {/* Delete Confirmation Modal */}
         {isDeleteModalOpen && selectedUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <Card className="w-full max-w-md">
               <CardHeader>
                 <CardTitle className="flex items-center text-red-600">
@@ -357,9 +359,11 @@ export default function UsersPage() {
 
         {/* Users Table */}
         {loading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">Cargando usuarios...</p>
-          </div>
+          <Card>
+            <CardContent className="pt-6">
+              <SkeletonTable rows={8} cols={6} />
+            </CardContent>
+          </Card>
         ) : filteredUsers && filteredUsers.length > 0 ? (
           <Card>
             <CardContent className="pt-6">

@@ -1,4 +1,4 @@
-import { Entity, Column, BeforeInsert, BeforeUpdate, OneToMany } from 'typeorm';
+import { Entity, Column, BeforeInsert, BeforeUpdate, OneToMany, OneToOne } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import * as bcrypt from 'bcrypt';
 
@@ -52,51 +52,22 @@ export class User extends BaseEntity {
   @Column({ type: 'boolean', default: true })
   activo: boolean;
 
-  // ── Campos de perfil de instructor ───────────────────────────────────────
-  @Column({ type: 'varchar', length: 150, nullable: true })
-  profesion: string;
+  // ── Perfil de instructor ─────────────────────────────────────────────────
+  // Los campos específicos de instructor viven en `perfil_instructor` (1:1)
+  // para no arrastrar columnas nulas en el resto de roles. Se carga eager para
+  // que los endpoints puedan aplanarlo en la respuesta (ver UsersService.toPublic).
+  @OneToOne('PerfilInstructor', 'user', { eager: true, nullable: true })
+  perfil?: import('./perfil-instructor.entity').PerfilInstructor;
 
-  @Column({
-    type: 'enum',
-    enum: DependenciaInstructor,
-    nullable: true,
-  })
-  dependencia: DependenciaInstructor;
+  // Colegio al que pertenece el usuario (null para roles de plataforma: admin/desarrollador).
+  // Determina el alcance de datos que puede ver un COORDINADOR o INSTRUCTOR.
+  @Column({ type: 'uuid', name: 'colegio_id', nullable: true })
+  colegioId: string | null;
 
-  @Column({ type: 'varchar', length: 150, nullable: true })
-  area: string;
-
-  @Column({ type: 'varchar', length: 150, nullable: true })
-  tipoPrograma: string;
-
-  @Column({ type: 'varchar', length: 150, nullable: true })
-  sede: string;
-
-  @Column({ type: 'date', nullable: true })
-  fechaInicioContrato: string;
-
-  @Column({ type: 'date', nullable: true })
-  fechaFinContrato: string;
-
-  @Column({ type: 'varchar', length: 200, nullable: true })
-  colegioArticulacion: string;
-
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  modalidadArticulacion: string;
-
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  jornadaArticulacion: string;
-
-  @Column({ type: 'varchar', length: 150, nullable: true })
-  localidad: string;
-
-  @Column({
-    type: 'enum',
-    enum: EstadoDisponibilidad,
-    nullable: true,
-    default: EstadoDisponibilidad.DISPONIBLE,
-  })
-  estadoDisponibilidad: EstadoDisponibilidad;
+  // Se incrementa en cada logout. El JWT lleva el valor vigente al momento de
+  // emitirse; si no coincide con este, el token quedó revocado (ver SEC-7).
+  @Column({ type: 'int', name: 'token_version', default: 0 })
+  tokenVersion: number;
 
   // Relación inversa con Fichas (para conteo de carga)
   @OneToMany('Ficha', 'instructor')

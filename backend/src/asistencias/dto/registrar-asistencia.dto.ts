@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsArray, ValidateNested, ArrayMinSize, IsUUID, IsBoolean } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsArray,
+  ValidateNested,
+  ArrayMinSize,
+  IsUUID,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class RegistroAsistenciaItemDto {

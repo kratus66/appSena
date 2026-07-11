@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { confirmDialog } from '@/components/ui/confirm-dialog';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -95,7 +96,7 @@ export default function PtcItemsTab({ ptcId, ptcEstado }: PtcItemsTabProps) {
   };
 
   const handleDelete = async (itemId: string) => {
-    if (!confirm('¿Eliminar este compromiso?')) return;
+    if (!(await confirmDialog('¿Eliminar este compromiso?'))) return;
 
     try {
       await api.delete(`/ptc/${ptcId}/items/${itemId}`);

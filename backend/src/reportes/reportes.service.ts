@@ -9,6 +9,7 @@ import { DisciplinaryCase, CaseEstado } from '../disciplinario/entities/discipli
 import { Ptc, PtcEstado } from '../ptc/entities/ptc.entity';
 import { CalendarEvent, EventStatus } from '../agenda/entities/calendar-event.entity';
 import { User, UserRole } from '../users/entities/user.entity';
+import { canAccessFicha, isPlatformRole } from '../common/utils/ficha-access.util';
 import { obtenerRangoFechas, RangoFechas, arrayToCsv } from './helpers/fechas.helper';
 import { QueryPanelCoordinacionDto } from './dto/query-panel-coordinacion.dto';
 
@@ -34,12 +35,7 @@ export class ReportesService {
   /**
    * Dashboard del instructor autenticado
    */
-  async getInstructorDashboard(
-    user: User,
-    desde?: string,
-    hasta?: string,
-    month?: string,
-  ) {
+  async getInstructorDashboard(user: User, desde?: string, hasta?: string, month?: string) {
     const rango = obtenerRangoFechas(desde, hasta, month);
 
     // Obtener fichas del instructor
@@ -143,8 +139,7 @@ export class ReportesService {
       throw new NotFoundException('Ficha no encontrada');
     }
 
-    // Validar permisos
-    if (user.rol === UserRole.INSTRUCTOR && ficha.instructorId !== user.id) {
+    if (!canAccessFicha(user, ficha)) {
       throw new ForbiddenException('No tienes permisos para ver esta ficha');
     }
 
@@ -255,8 +250,7 @@ export class ReportesService {
       throw new NotFoundException('Aprendiz no encontrado');
     }
 
-    // Validar permisos
-    if (user.rol === UserRole.INSTRUCTOR && aprendiz.ficha?.instructorId !== user.id) {
+    if (aprendiz.ficha && !canAccessFicha(user, aprendiz.ficha)) {
       throw new ForbiddenException('No tienes permisos para ver este aprendiz');
     }
 
@@ -392,8 +386,16 @@ export class ReportesService {
     // Construir query de fichas con filtros
     const fichasQuery = this.fichaRepository.createQueryBuilder('ficha');
 
-    if (query.colegioId) {
-      fichasQuery.andWhere('ficha.colegioId = :colegioId', { colegioId: query.colegioId });
+    // Un coordinador no puede pedir el panel de otro colegio: el suyo manda
+    // sobre cualquier colegioId que venga en el query param.
+    const colegioIdEfectivo = isPlatformRole(user) ? query.colegioId : user.colegioId;
+
+    if (!isPlatformRole(user)) {
+      fichasQuery.andWhere('ficha.colegioId = :colegioId', {
+        colegioId: colegioIdEfectivo ?? null,
+      });
+    } else if (colegioIdEfectivo) {
+      fichasQuery.andWhere('ficha.colegioId = :colegioId', { colegioId: colegioIdEfectivo });
     }
 
     if (query.programaId) {
@@ -467,7 +469,7 @@ export class ReportesService {
       throw new NotFoundException('Ficha no encontrada');
     }
 
-    if (user.rol === UserRole.INSTRUCTOR && ficha.instructorId !== user.id) {
+    if (!canAccessFicha(user, ficha)) {
       throw new ForbiddenException('No tienes permisos para exportar esta ficha');
     }
 
@@ -516,7 +518,7 @@ export class ReportesService {
       throw new NotFoundException('Ficha no encontrada');
     }
 
-    if (user.rol === UserRole.INSTRUCTOR && ficha.instructorId !== user.id) {
+    if (!canAccessFicha(user, ficha)) {
       throw new ForbiddenException('No tienes permisos para exportar esta ficha');
     }
 

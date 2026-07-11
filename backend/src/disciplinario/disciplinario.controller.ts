@@ -1,22 +1,5 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Query,
-  UseGuards,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { DisciplinarioService } from './disciplinario.service';
 import { CreateCaseDto } from './dto/create-case.dto';
 import { UpdateCaseDto } from './dto/update-case.dto';
@@ -57,10 +40,7 @@ export class DisciplinarioController {
   @ApiResponse({ status: 400, description: 'Datos inválidos o fecha futura' })
   @ApiResponse({ status: 403, description: 'Sin permisos para crear caso en esta ficha' })
   @ApiResponse({ status: 404, description: 'Ficha o aprendiz no encontrado' })
-  create(
-    @Body() createCaseDto: CreateCaseDto,
-    @GetUser() user: User,
-  ): Promise<DisciplinaryCase> {
+  create(@Body() createCaseDto: CreateCaseDto, @GetUser() user: User): Promise<DisciplinaryCase> {
     return this.disciplinarioService.create(createCaseDto, user);
   }
 
@@ -83,7 +63,8 @@ export class DisciplinarioController {
   @Roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.INSTRUCTOR)
   @ApiOperation({
     summary: 'Obtener detalle de un caso disciplinario',
-    description: 'Retorna el caso completo con ficha, aprendiz y todas sus acciones ordenadas cronológicamente.',
+    description:
+      'Retorna el caso completo con ficha, aprendiz y todas sus acciones ordenadas cronológicamente.',
   })
   @ApiParam({ name: 'id', description: 'ID del caso', type: 'string' })
   @ApiResponse({

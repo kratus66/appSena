@@ -1,5 +1,10 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs';
@@ -18,12 +23,12 @@ export class UploadService {
     // Configuración de AWS S3
     this.region = process.env.AWS_REGION || 'us-east-1';
     this.bucketName = process.env.AWS_S3_BUCKET_NAME || 'appsena-evidencias';
-    
+
     // Verificar si las credenciales de AWS están configuradas
-    const awsConfigured = 
-      process.env.AWS_ACCESS_KEY_ID && 
+    const awsConfigured =
+      process.env.AWS_ACCESS_KEY_ID &&
       process.env.AWS_ACCESS_KEY_ID !== 'PENDIENTE_CONFIGURAR' &&
-      process.env.AWS_SECRET_ACCESS_KEY && 
+      process.env.AWS_SECRET_ACCESS_KEY &&
       process.env.AWS_SECRET_ACCESS_KEY !== 'PENDIENTE_CONFIGURAR';
 
     this.useLocalStorage = !awsConfigured;
@@ -114,8 +119,9 @@ export class UploadService {
       // Guardar archivo
       fs.writeFileSync(filePath, file.buffer);
 
-      // URL local (asumiendo que el backend sirve archivos estáticos desde /uploads)
-      const url = `http://localhost:3000/uploads/${fileName.replace(/\\/g, '/')}`;
+      // URL local: servida por el endpoint autenticado GET /api/uploads/:folder/:filename
+      // (no es un static asset público — ver resolveLocalFilePath)
+      const url = `http://localhost:3000/api/uploads/${fileName.replace(/\\/g, '/')}`;
 
       this.logger.log(`✅ Archivo guardado localmente: ${filePath}`);
 
@@ -188,12 +194,35 @@ export class UploadService {
   }
 
   /**
+   * Resuelve la ruta absoluta de un archivo local a partir de su key
+   * (folder/filename), validando que no se escape del directorio de uploads
+   * (path traversal) y que exista.
+   */
+  resolveLocalFilePath(key: string): string {
+    const filePath = path.join(this.uploadDir, key);
+
+    if (!filePath.startsWith(this.uploadDir + path.sep) && filePath !== this.uploadDir) {
+      throw new NotFoundException('Archivo no encontrado');
+    }
+
+    if (!fs.existsSync(filePath)) {
+      throw new NotFoundException('Archivo no encontrado');
+    }
+
+    return filePath;
+  }
+
+  isUsingLocalStorage(): boolean {
+    return this.useLocalStorage;
+  }
+
+  /**
    * Genera una URL firmada para acceso temporal
    */
   async getSignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
     if (this.useLocalStorage) {
-      // Modo desarrollo: retornar URL local
-      return `http://localhost:3000/uploads/${key.replace(/\\/g, '/')}`;
+      // Modo desarrollo: retornar URL local (endpoint autenticado)
+      return `http://localhost:3000/api/uploads/${key.replace(/\\/g, '/')}`;
     }
 
     try {

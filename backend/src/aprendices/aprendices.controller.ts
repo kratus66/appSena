@@ -11,13 +11,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { AprendicesService } from './aprendices.service';
 import { CreateAprendizDto } from './dto/create-aprendiz.dto';
 import { UpdateAprendizDto } from './dto/update-aprendiz.dto';
@@ -52,10 +46,7 @@ export class AprendicesController {
   @ApiResponse({ status: 401, description: 'No autenticado' })
   @ApiResponse({ status: 403, description: 'Sin permisos' })
   @ApiResponse({ status: 409, description: 'Ya existe un aprendiz con ese documento o email' })
-  create(
-    @Body() createAprendizDto: CreateAprendizDto,
-    @GetUser() user: User,
-  ): Promise<Aprendiz> {
+  create(@Body() createAprendizDto: CreateAprendizDto, @GetUser() user: User): Promise<Aprendiz> {
     return this.aprendicesService.create(createAprendizDto, user);
   }
 

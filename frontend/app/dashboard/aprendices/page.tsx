@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { SkeletonTable } from '@/components/ui/skeleton';
+import toast from 'react-hot-toast';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -131,14 +133,14 @@ export default function AprendicesPage() {
       // No enviar documento ni tipoDocumento (campos no editables)
       const { documento, tipoDocumento, ...dataToUpdate } = editFormData;
       await api.patch(`/aprendices/${selectedAprendiz.id}`, dataToUpdate);
-      alert('✅ Aprendiz actualizado exitosamente');
+      toast.success('Aprendiz actualizado exitosamente');
       setIsEditModalOpen(false);
       setSelectedAprendiz(null);
       fetchAprendices();
     } catch (error: any) {
       console.error('Error updating aprendiz:', error);
       const mensaje = error.response?.data?.message || 'Error al actualizar el aprendiz';
-      alert('❌ Error: ' + mensaje);
+      toast.error(mensaje);
     } finally {
       setIsSaving(false);
     }
@@ -153,14 +155,14 @@ export default function AprendicesPage() {
     if (!selectedAprendiz) return;
     try {
       await api.delete(`/aprendices/${selectedAprendiz.id}`);
-      alert('✅ Aprendiz eliminado exitosamente');
+      toast.success('Aprendiz eliminado exitosamente');
       setIsDeleteModalOpen(false);
       setSelectedAprendiz(null);
       fetchAprendices();
     } catch (error: any) {
       console.error('Error deleting aprendiz:', error);
       const mensaje = error.response?.data?.message || 'Error al eliminar el aprendiz';
-      alert('❌ Error: ' + mensaje);
+      toast.error(mensaje);
     }
   };
 
@@ -206,10 +208,10 @@ export default function AprendicesPage() {
       link.click();
       document.body.removeChild(link);
 
-      alert('✅ Datos exportados exitosamente');
+      toast.success('Datos exportados exitosamente');
     } catch (error) {
       console.error('Error exporting data:', error);
-      alert('❌ Error al exportar los datos');
+      toast.error('Error al exportar los datos');
     }
   };
 
@@ -219,31 +221,19 @@ export default function AprendicesPage() {
 
       // Validar que todos los campos requeridos estén llenos
       if (!createFormData.password || createFormData.password.length < 6) {
-        alert('❌ La contraseña debe tener al menos 6 caracteres');
+        toast.error('La contraseña debe tener al menos 6 caracteres');
         setIsSaving(false);
         return;
       }
 
       if (!createFormData.email) {
-        alert('❌ El email es requerido');
+        toast.error('El email es requerido');
         setIsSaving(false);
         return;
       }
 
-      // Paso 1: Crear el usuario primero
-      const userPayload = {
-        nombre: `${createFormData.nombres} ${createFormData.apellidos}`,
-        email: createFormData.email,
-        password: createFormData.password,
-        documento: createFormData.documento,
-        telefono: createFormData.telefono || '',
-        rol: 'aprendiz',
-      };
-
-      const userResponse = await api.post('/users', userPayload);
-      const userId = userResponse.data.id;
-
-      // Paso 2: Crear el aprendiz con el userId obtenido
+      // Una sola llamada: el backend crea el usuario (rol aprendiz) y el
+      // aprendiz dentro de una transacción, evitando usuarios huérfanos.
       const aprendizPayload = {
         nombres: createFormData.nombres,
         apellidos: createFormData.apellidos,
@@ -253,13 +243,13 @@ export default function AprendicesPage() {
         telefono: createFormData.telefono,
         direccion: createFormData.direccion,
         estadoAcademico: createFormData.estadoAcademico,
-        userId: userId,
+        password: createFormData.password,
         fichaId: createFormData.fichaId,
       };
 
       await api.post('/aprendices', aprendizPayload);
-      
-      alert('✅ Aprendiz creado exitosamente');
+
+      toast.success('Aprendiz creado exitosamente');
       setIsCreateModalOpen(false);
       setCreateFormData({
         nombres: '',
@@ -278,9 +268,9 @@ export default function AprendicesPage() {
       console.error('Error creating aprendiz:', error);
       const mensaje = error.response?.data?.message;
       if (Array.isArray(mensaje)) {
-        alert('❌ Error: ' + mensaje.join(', '));
+        toast.error(mensaje.join(', '));
       } else {
-        alert('❌ Error: ' + (mensaje || 'Error al crear el aprendiz'));
+        toast.error((mensaje || 'Error al crear el aprendiz'));
       }
     } finally {
       setIsSaving(false);
@@ -314,7 +304,7 @@ export default function AprendicesPage() {
 
         {/* View Modal - Matching Users Design */}
         {isViewModalOpen && selectedAprendiz && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <Card className="w-full max-w-2xl">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -427,7 +417,7 @@ export default function AprendicesPage() {
 
         {/* Create Modal */}
         {isCreateModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
             <Card className="w-full max-w-2xl my-8 bg-white">
               <CardHeader className="border-b border-gray-200">
                 <div className="flex items-center justify-between">
@@ -639,7 +629,7 @@ export default function AprendicesPage() {
 
         {/* Edit Modal */}
         {isEditModalOpen && selectedAprendiz && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
             <Card className="w-full max-w-2xl my-8 bg-white">
               <CardHeader className="border-b border-gray-200">
                 <div className="flex items-center justify-between">
@@ -794,7 +784,7 @@ export default function AprendicesPage() {
 
         {/* Delete Confirmation Modal */}
         {isDeleteModalOpen && selectedAprendiz && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <Card className="w-full max-w-md">
               <CardHeader>
                 <CardTitle className="flex items-center text-red-600">
@@ -955,7 +945,7 @@ export default function AprendicesPage() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="text-center py-8 text-gray-500">Cargando...</div>
+              <SkeletonTable rows={8} cols={6} />
             ) : filteredAprendices.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 {estadoFilter ? `No hay aprendices con estado ${estadoFilter}` : 'No se encontraron aprendices'}

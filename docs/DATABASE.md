@@ -2,7 +2,7 @@
 
 > Última actualización: Abril 2026  
 > Motor: PostgreSQL 15  
-> ORM: TypeORM (`synchronize: true` en desarrollo)
+> ORM: TypeORM (`synchronize: false` — el esquema se gestiona con migraciones en `src/database/migrations`)
 
 ---
 
@@ -43,13 +43,46 @@ Todos los modelos incluyen estos campos automáticamente:
 | `documento` | `VARCHAR(20)` | UNIQUE, NOT NULL | Número de documento |
 | `telefono` | `VARCHAR(20)` | NULLABLE | Teléfono de contacto |
 | `password` | `VARCHAR(255)` | NOT NULL | Contraseña hasheada (bcrypt) |
-| `rol` | `ENUM` | DEFAULT `instructor` | `admin`, `instructor`, `coordinador`, `aprendiz` |
+| `rol` | `ENUM` | DEFAULT `instructor` | `admin`, `instructor`, `coordinador`, `aprendiz`, `desarrollador` |
 | `foto_perfil` | `VARCHAR(500)` | NULLABLE | URL de foto (S3 o local) |
 | `activo` | `BOOLEAN` | DEFAULT `true` | Estado activo/inactivo |
 
+**Columnas adicionales (no listadas arriba):**
+- `colegio_id` (UUID, nullable): colegio del usuario; acota el alcance de datos de `coordinador`/`instructor`. NULL para roles de plataforma (`admin`/`desarrollador`)
+- `token_version` (INT, default 0): se incrementa al cerrar sesión para invalidar tokens JWT previos
+
+> **Perfil de instructor:** los campos específicos de instructor **no** están en `users`; viven en la tabla 1:1 `perfil_instructor` (ver abajo). La API los sigue aceptando y devolviendo de forma plana (`UsersService` los enruta hacia/desde la relación).
+
 **Notas:**
-- Al crear un aprendiz por importación Excel, se crea automáticamente un `User` con `rol = aprendiz`, contraseña = documento del aprendiz (hasheada con bcrypt)
+- Al crear un aprendiz (manual o por importación Excel) se crea automáticamente un `User` con `rol = aprendiz`, contraseña = documento del aprendiz (hasheada con bcrypt). Estos usuarios hoy no se usan para login — pendiente consolidar el modelo
+- La creación de aprendiz (usuario + aprendiz) ocurre en una única transacción
 - Los passwords se hashean automáticamente con `@BeforeInsert` y `@BeforeUpdate`
+
+---
+
+### `perfil_instructor` — Perfil del rol instructor (1:1 con `users`)
+
+Datos específicos del instructor, separados de `users` para no arrastrar ~12 columnas nulas en el resto de roles.
+
+| Campo | Tipo | Restricciones | Descripción |
+|-------|------|---------------|-------------|
+| `user_id` | `UUID FK` | UNIQUE, NOT NULL → `users` (ON DELETE CASCADE) | Usuario instructor |
+| `profesion` | `VARCHAR(150)` | NULLABLE | Profesión |
+| `dependencia` | `ENUM` | NULLABLE | `Articulacion`, `Titulada`, `Complementaria` |
+| `area` | `VARCHAR(150)` | NULLABLE | Área de conocimiento |
+| `tipoPrograma` | `VARCHAR(150)` | NULLABLE | Técnico, Tecnólogo, etc. |
+| `sede` | `VARCHAR(150)` | NULLABLE | Sede administrativa |
+| `fechaInicioContrato` / `fechaFinContrato` | `DATE` | NULLABLE | Vigencia del contrato |
+| `colegioArticulacion` | `VARCHAR(200)` | NULLABLE | Solo articulación |
+| `modalidadArticulacion` | `VARCHAR(100)` | NULLABLE | Solo articulación |
+| `jornadaArticulacion` | `VARCHAR(50)` | NULLABLE | Solo articulación |
+| `localidad` | `VARCHAR(150)` | NULLABLE | Localidad |
+| `estadoDisponibilidad` | `ENUM` | DEFAULT `Disponible` | `Disponible`, `Parcial`, `Saturado` |
+
+**Notas:**
+- Relación 1:1: un usuario `instructor` tiene a lo sumo un perfil. Se carga `eager`
+- La API expone estos campos **planos** dentro del objeto usuario (retrocompatible); `UsersService` los separa al escribir y los aplana al leer
+- Migración: `MoveInstructorProfileToPerfilInstructor`
 
 ---
 

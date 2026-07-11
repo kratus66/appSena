@@ -12,10 +12,20 @@ import {
   MinLength,
   MaxLength,
 } from 'class-validator';
-import { JornadaFicha, EstadoFicha, DependenciaFicha, ModalidadArticulacion } from '../entities/ficha.entity';
+import {
+  JornadaFicha,
+  EstadoFicha,
+  DependenciaFicha,
+  ModalidadArticulacion,
+} from '../entities/ficha.entity';
 
 export class CreateFichaDto {
-  @ApiProperty({ example: '2654321', description: 'Número único de la ficha', minLength: 3, maxLength: 30 })
+  @ApiProperty({
+    example: '2654321',
+    description: 'Número único de la ficha',
+    minLength: 3,
+    maxLength: 30,
+  })
   @IsString()
   @IsNotEmpty({ message: 'El número de ficha es requerido' })
   @MinLength(3)
@@ -27,12 +37,21 @@ export class CreateFichaDto {
   @IsNotEmpty({ message: 'La jornada es requerida' })
   jornada: JornadaFicha;
 
-  @ApiProperty({ example: 'TITULADA', description: 'Dependencia operativa', enum: DependenciaFicha, required: false })
+  @ApiProperty({
+    example: 'TITULADA',
+    description: 'Dependencia operativa',
+    enum: DependenciaFicha,
+    required: false,
+  })
   @IsEnum(DependenciaFicha)
   @IsOptional()
   dependencia?: DependenciaFicha;
 
-  @ApiProperty({ example: 'Formacion titulada', description: 'Tipo de programa de formación', required: false })
+  @ApiProperty({
+    example: 'Formacion titulada',
+    description: 'Tipo de programa de formación',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   @MaxLength(200)
@@ -45,7 +64,12 @@ export class CreateFichaDto {
   @IsOptional()
   cupoEsperado?: number;
 
-  @ApiProperty({ example: 'COMPARTIDA', description: 'Modalidad de articulación', enum: ModalidadArticulacion, required: false })
+  @ApiProperty({
+    example: 'COMPARTIDA',
+    description: 'Modalidad de articulación',
+    enum: ModalidadArticulacion,
+    required: false,
+  })
   @IsEnum(ModalidadArticulacion)
   @IsOptional()
   modalidadArticulacion?: ModalidadArticulacion;
@@ -62,12 +86,21 @@ export class CreateFichaDto {
   @MaxLength(200)
   ambiente?: string;
 
-  @ApiProperty({ example: 'Observaciones...', description: 'Observaciones adicionales', required: false })
+  @ApiProperty({
+    example: 'Observaciones...',
+    description: 'Observaciones adicionales',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   observaciones?: string;
 
-  @ApiProperty({ example: 'ACTIVA', description: 'Estado inicial', enum: EstadoFicha, required: false })
+  @ApiProperty({
+    example: 'ACTIVA',
+    description: 'Estado inicial',
+    enum: EstadoFicha,
+    required: false,
+  })
   @IsEnum(EstadoFicha)
   @IsOptional()
   estado?: EstadoFicha;

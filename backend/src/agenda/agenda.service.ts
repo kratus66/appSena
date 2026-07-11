@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, Not, IsNull } from 'typeorm';
+import { Repository } from 'typeorm';
 import { CalendarEvent, EventStatus } from './entities/calendar-event.entity';
 import { Reminder, ReminderStatus, ReminderChannel } from './entities/reminder.entity';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -14,6 +14,7 @@ import { UpdateEventEstadoDto } from './dto/update-event-estado.dto';
 import { QueryEventsDto } from './dto/query-events.dto';
 import { CreateReminderDto } from './dto/create-reminder.dto';
 import { User, UserRole } from '../users/entities/user.entity';
+import { canAccessFicha, isPlatformRole } from '../common/utils/ficha-access.util';
 import { FichasService } from '../fichas/fichas.service';
 import { AprendicesService } from '../aprendices/aprendices.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
@@ -106,12 +107,20 @@ export class AgendaService {
       hasta: new Date(hasta),
     });
 
-    // Permisos: INSTRUCTOR solo ve eventos de sus fichas o creados por él
-    if (user.rol === UserRole.INSTRUCTOR) {
-      qb.andWhere(
-        '(ficha.instructorId = :userId OR event.createdByUserId = :userId OR event.assignedToId = :userId)',
-        { userId: user.id },
-      );
+    // Permisos: instructor ve sus fichas; coordinador su colegio; ambos ven
+    // además lo que crearon o les asignaron. Admin/desarrollador sin restricción.
+    if (!isPlatformRole(user)) {
+      if (user.rol === UserRole.INSTRUCTOR) {
+        qb.andWhere(
+          '(ficha.instructorId = :userId OR event.createdByUserId = :userId OR event.assignedToId = :userId)',
+          { userId: user.id },
+        );
+      } else {
+        qb.andWhere(
+          '(ficha.colegioId = :userColegioId OR event.createdByUserId = :userId OR event.assignedToId = :userId)',
+          { userColegioId: user.colegioId ?? null, userId: user.id },
+        );
+      }
     }
 
     // Filtros opcionales
@@ -224,9 +233,7 @@ export class AgendaService {
       const fechaInicio = updateEventDto.fechaInicio
         ? new Date(updateEventDto.fechaInicio)
         : event.fechaInicio;
-      const fechaFin = updateEventDto.fechaFin
-        ? new Date(updateEventDto.fechaFin)
-        : event.fechaFin;
+      const fechaFin = updateEventDto.fechaFin ? new Date(updateEventDto.fechaFin) : event.fechaFin;
 
       if (fechaFin && fechaFin < fechaInicio) {
         throw new BadRequestException('La fecha de fin debe ser posterior a la fecha de inicio');
@@ -355,6 +362,8 @@ export class AgendaService {
       throw new NotFoundException('Recordatorio no encontrado');
     }
 
+    await this.validateEventPermission(reminder.event, user);
+
     if (reminder.estado === ReminderStatus.ENVIADO) {
       throw new BadRequestException('El recordatorio ya fue enviado');
     }
@@ -384,30 +393,23 @@ export class AgendaService {
   // ==================== HELPERS ====================
 
   private async validateFichaPermission(fichaId: string, user: User) {
-    if (user.rol === UserRole.ADMIN) {
-      return; // Admin tiene acceso total
-    }
-
     const ficha = await this.fichasService.findOne(fichaId);
 
-    if (user.rol === UserRole.INSTRUCTOR && ficha.instructorId !== user.id) {
+    if (!canAccessFicha(user, ficha)) {
       throw new ForbiddenException('No tienes permisos para crear eventos en esta ficha');
     }
-
-    // COORDINADOR: puede crear en fichas de su colegio (si existe esa lógica)
-    // Por ahora permitimos
   }
 
   private async validateEventPermission(event: CalendarEvent, user: User) {
-    if (user.rol === UserRole.ADMIN) {
+    if (isPlatformRole(user)) {
       return;
     }
 
     const isOwner = event.createdByUserId === user.id;
     const isAssigned = event.assignedToId === user.id;
-    const isInstructor = event.ficha?.instructorId === user.id;
+    const hasFichaAccess = event.ficha ? canAccessFicha(user, event.ficha) : false;
 
-    if (!isOwner && !isAssigned && !isInstructor) {
+    if (!isOwner && !isAssigned && !hasFichaAccess) {
       throw new ForbiddenException('No tienes permisos para acceder a este evento');
     }
   }

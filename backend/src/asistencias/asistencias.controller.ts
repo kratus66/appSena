@@ -69,7 +69,7 @@ export class AsistenciasController {
     @Body() createSesionDto: CreateSesionDto,
     @GetUser() user: User,
   ): Promise<ClaseSesion> {
-    return this.asistenciasService.createSesion(createSesionDto, user.id, user.rol);
+    return this.asistenciasService.createSesion(createSesionDto, user);
   }
 
   @Get('sesiones')
@@ -87,7 +87,7 @@ export class AsistenciasController {
     @Query() querySesionesDto: QuerySesionesDto,
     @GetUser() user: User,
   ): Promise<{ data: ClaseSesion[]; total: number; page: number; limit: number }> {
-    return this.asistenciasService.findAllSesiones(querySesionesDto, user.id, user.rol);
+    return this.asistenciasService.findAllSesiones(querySesionesDto, user);
   }
 
   @Get('sesiones/:id')
@@ -116,7 +116,7 @@ export class AsistenciasController {
     description: 'No tienes permisos para ver esta sesión',
   })
   async findOneSesion(@Param('id') id: string, @GetUser() user: User): Promise<ClaseSesion> {
-    return this.asistenciasService.findOneSesion(id, user.id, user.rol);
+    return this.asistenciasService.findOneSesion(id, user);
   }
 
   // ==================== ASISTENCIAS ====================
@@ -155,7 +155,7 @@ export class AsistenciasController {
     @Body() registrarAsistenciaDto: RegistrarAsistenciaDto,
     @GetUser() user: User,
   ): Promise<{ message: string; registradas: number }> {
-    return this.asistenciasService.registrarAsistencias(id, registrarAsistenciaDto, user.id, user.rol);
+    return this.asistenciasService.registrarAsistencias(id, registrarAsistenciaDto, user);
   }
 
   @Patch('asistencias/:id/justificar')
@@ -192,7 +192,7 @@ export class AsistenciasController {
     @Body() justificarDto: JustificarAsistenciaDto,
     @GetUser() user: User,
   ): Promise<Asistencia> {
-    return this.asistenciasService.justificarAsistencia(id, justificarDto, user.id, user.rol);
+    return this.asistenciasService.justificarAsistencia(id, justificarDto, user);
   }
 
   // ==================== ALERTAS ====================
@@ -229,7 +229,7 @@ export class AsistenciasController {
     @Query() queryAlertasDto: QueryAlertasDto,
     @GetUser() user: User,
   ): Promise<any> {
-    return this.asistenciasService.getAlertasFicha(fichaId, queryAlertasDto, user.id, user.rol);
+    return this.asistenciasService.getAlertasFicha(fichaId, queryAlertasDto, user);
   }
 
   // ==================== REPORTES ====================
@@ -281,6 +281,6 @@ export class AsistenciasController {
     @Query('hasta') hasta?: string,
     @GetUser() user?: User,
   ): Promise<any> {
-    return this.asistenciasService.getResumenFicha(fichaId, desde, hasta, user?.id, user?.rol);
+    return this.asistenciasService.getResumenFicha(fichaId, desde, hasta, user);
   }
 }

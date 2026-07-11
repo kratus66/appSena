@@ -33,7 +33,9 @@ export class CreateCaseDto {
     example: 'CONVIVENCIA',
   })
   @IsNotEmpty({ message: 'El tipo de caso es obligatorio' })
-  @IsEnum(CaseTipo, { message: 'El tipo debe ser uno de: CONVIVENCIA, ACADEMICO, ASISTENCIA, OTRO' })
+  @IsEnum(CaseTipo, {
+    message: 'El tipo debe ser uno de: CONVIVENCIA, ACADEMICO, ASISTENCIA, OTRO',
+  })
   tipo: CaseTipo;
 
   @ApiProperty({

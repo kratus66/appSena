@@ -30,11 +30,11 @@ export class ProgramasService {
 
   async findAll(activo?: boolean, nivelFormacion?: string): Promise<Programa[]> {
     const where: any = {};
-    
+
     if (activo !== undefined) {
       where.activo = activo;
     }
-    
+
     if (nivelFormacion) {
       where.nivelFormacion = nivelFormacion;
     }
@@ -103,7 +103,7 @@ export class ProgramasService {
   async getEstadisticas() {
     const total = await this.programaRepository.count();
     const activos = await this.programaRepository.count({ where: { activo: true } });
-    
+
     const porNivel = await this.programaRepository
       .createQueryBuilder('programa')
       .select('programa.nivelFormacion', 'nivel')

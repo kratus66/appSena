@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import toast from 'react-hot-toast';
 import {
   Dialog,
   DialogContent,
@@ -82,7 +83,7 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess }: CreateEvent
       resetForm();
     } catch (error: any) {
       console.error('Error creating event:', error);
-      alert(error.response?.data?.message || 'Error al crear el evento');
+      toast.error(error.response?.data?.message || 'Error al crear el evento');
     } finally {
       setLoading(false);
     }

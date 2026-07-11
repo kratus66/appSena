@@ -7,6 +7,8 @@ import { ChartCard } from '@/components/dashboard/chart-card';
 import { PieChartCard } from '@/components/dashboard/pie-chart-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { SkeletonCards, SkeletonTable } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   Users,
   GraduationCap,
@@ -14,8 +16,30 @@ import {
   School,
   TrendingUp,
   AlertCircle,
+  BarChart3,
 } from 'lucide-react';
 import api from '@/lib/api';
+
+const NOMBRES_MES = [
+  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+];
+
+function calcularAprendicesPorMes(aprendices: any[]): { name: string; value: number }[] {
+  const hoy = new Date();
+  const meses = Array.from({ length: 6 }, (_, i) => {
+    const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - (5 - i), 1);
+    return { anio: fecha.getFullYear(), mes: fecha.getMonth(), name: NOMBRES_MES[fecha.getMonth()], value: 0 };
+  });
+
+  for (const aprendiz of aprendices) {
+    if (!aprendiz.createdAt) continue;
+    const fecha = new Date(aprendiz.createdAt);
+    const bucket = meses.find((m) => m.anio === fecha.getFullYear() && m.mes === fecha.getMonth());
+    if (bucket) bucket.value += 1;
+  }
+
+  return meses.map(({ name, value }) => ({ name, value }));
+}
 
 export default function DashboardPage() {
   const [stats, setStats] = React.useState({
@@ -31,6 +55,7 @@ export default function DashboardPage() {
   });
 
   const [fichasPorPrograma, setFichasPorPrograma] = React.useState<any[]>([]);
+  const [aprendicesPorMes, setAprendicesPorMes] = React.useState<{ name: string; value: number }[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -90,6 +115,7 @@ export default function DashboardPage() {
         .slice(0, 5); // Top 5 programas
 
       setFichasPorPrograma(fichasPorProgramaArray);
+      setAprendicesPorMes(calcularAprendicesPorMes(aprendicesData));
 
       setStats({
         totalAprendices: aprendices.data.total || 0,
@@ -109,15 +135,6 @@ export default function DashboardPage() {
     }
   };
 
-  const aprendicesPorMes = [
-    { name: 'Ene', value: 45 },
-    { name: 'Feb', value: 52 },
-    { name: 'Mar', value: 61 },
-    { name: 'Abr', value: 58 },
-    { name: 'May', value: 70 },
-    { name: 'Jun', value: 75 },
-  ];
-
   const estadoAcademico = [
     { name: 'Activos', value: stats.aprendicesActivos },
     { name: 'Suspendidos', value: stats.suspendidos },
@@ -128,8 +145,16 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-gray-500">Cargando...</div>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Dashboard</h1>
+            <p className="text-gray-500 mt-1">Bienvenido al sistema de gestión AppSena</p>
+          </div>
+          <SkeletonCards count={4} />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card><CardContent className="p-6"><SkeletonTable rows={5} cols={2} /></CardContent></Card>
+            <Card><CardContent className="p-6"><SkeletonTable rows={5} cols={2} /></CardContent></Card>
+          </div>
         </div>
       </DashboardLayout>
     );
@@ -152,7 +177,6 @@ export default function DashboardPage() {
             description="Aprendices registrados"
             icon={GraduationCap}
             color="blue"
-            trend={{ value: 12.5, isPositive: true }}
           />
           <StatsCard
             title="Fichas Activas"
@@ -160,7 +184,6 @@ export default function DashboardPage() {
             description="Fichas en curso"
             icon={FileText}
             color="green"
-            trend={{ value: 8.2, isPositive: true }}
           />
           <StatsCard
             title="Colegios"
@@ -180,12 +203,27 @@ export default function DashboardPage() {
 
         {/* Charts Row 1 */}
         <div className="grid gap-6 lg:grid-cols-2">
-          <ChartCard
-            title="Nuevos Aprendices por Mes"
-            data={aprendicesPorMes}
-            dataKey="value"
-            color="#10b981"
-          />
+          {aprendicesPorMes.some((m) => m.value > 0) ? (
+            <ChartCard
+              title="Nuevos Aprendices por Mes"
+              data={aprendicesPorMes}
+              dataKey="value"
+              color="#39a900"
+            />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Nuevos Aprendices por Mes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <EmptyState
+                  icon={GraduationCap}
+                  title="Aún no hay aprendices registrados este semestre"
+                  description="Cuando registres aprendices, verás aquí la tendencia de los últimos 6 meses."
+                />
+              </CardContent>
+            </Card>
+          )}
           <PieChartCard
             title="Estado Académico de Aprendices"
             data={estadoAcademico}
@@ -194,17 +232,35 @@ export default function DashboardPage() {
 
         {/* Charts Row 2 */}
         <div className="grid gap-6 lg:grid-cols-2">
-          <ChartCard
-            title="Fichas por Programa"
-            data={fichasPorPrograma}
-            dataKey="value"
-            color="#3b82f6"
-          />
+          {fichasPorPrograma.length > 0 ? (
+            <ChartCard
+              title="Fichas por Programa"
+              data={fichasPorPrograma}
+              dataKey="value"
+              color="#3b82f6"
+            />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Fichas por Programa</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <EmptyState
+                  icon={BarChart3}
+                  title="Aún no hay fichas registradas"
+                  description="Cuando registres fichas asociadas a programas, verás aquí su distribución."
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Recent Activities */}
           <Card>
             <CardHeader>
-              <CardTitle>Actividades Recientes</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Actividades Recientes</CardTitle>
+                <Badge variant="secondary">Ejemplo</Badge>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">

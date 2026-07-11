@@ -3,20 +3,193 @@
 @source "../components/**/*.{tsx,ts,jsx,js}";
 @source "../lib/**/*.{tsx,ts,js}";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ============================================================
+   AppSena — Sistema de diseño
+   Marca anclada en el verde institucional SENA (#39A900),
+   neutros con leve sesgo cálido y colores semánticos de estado.
+   ============================================================ */
+@theme {
+  /* Marca */
+  --color-brand-50:  #EAF5E1;
+  --color-brand-100: #D6ECC6;
+  --color-brand-200: #B4DE97;
+  --color-brand-300: #8ECE64;
+  --color-brand-400: #63BA33;
+  --color-brand-500: #39A900;  /* verde SENA */
+  --color-brand-600: #2F8E00;
+  --color-brand-700: #2C7E02;
+  --color-brand-800: #1E5A00;
+  --color-brand-900: #164400;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* Neutros con sesgo verde (elegidos, no por defecto) */
+  --color-paper:   #F5F8F1;
+  --color-ink:     #16211B;
+  --color-ink-soft:#63756A;
+
+  /* Fuentes reales del proyecto */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-body {
-  background: #ffffff;
-  color: #171717;
-  font-family: Arial, Helvetica, sans-serif;
+:root {
+  --background: #f5f8f1;
+  --foreground: #16211b;
 }
+
+/* Base ---------------------------------------------------------- */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  /* Restaurada la tipografía real del proyecto (antes: Arial) */
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+::selection {
+  background: #d6ecc6;
+  color: #164400;
+}
+
+/* Foco de teclado visible y consistente en toda la app (accesibilidad) */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid #39a900;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Scrollbar discreta acorde a la marca */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c3d3bd transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: #c3d3bd;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: #a9c19f; background-clip: content-box; }
+
+/* Animaciones base reutilizables ------------------------------- */
+@keyframes as-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes as-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes as-shimmer { 100% { transform: translateX(100%); } }
+
+.animate-fade-in { animation: as-fade-in .22s ease-out both; }
+.animate-overlay-in { animation: as-overlay-in .18s ease-out both; }
+
+/* Skeleton loader (reemplaza los textos "Cargando...") */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #e7eee1;
+  border-radius: 8px;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  animation: as-shimmer 1.4s infinite;
+}
+
+/* Respeta la preferencia de menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  .skeleton::after { animation: none; }
+}
+
+/* ============================================================
+   MODO OSCURO
+   Remapeo de utilidades bajo el scope html.dark. Al no estar en
+   una @layer, estas reglas ganan a las utilidades de Tailwind sin
+   necesidad de !important y sin tocar el markup de cada página.
+   ============================================================ */
+html.dark { color-scheme: dark; }
+html.dark body { background: #0d1310; color: #eaf2e7; }
+
+/* Superficies neutras */
+html.dark .bg-white { background-color: #141e18; }
+html.dark .bg-gray-50 { background-color: #0f1712; }
+html.dark .bg-gray-100 { background-color: #1c2a22; }
+html.dark .bg-gray-200 { background-color: #243329; }
+html.dark .bg-gray-800 { background-color: #101a14; }
+html.dark .bg-gray-900 { background-color: #0a0f0c; }
+
+/* Texto neutro */
+html.dark .text-gray-950,
+html.dark .text-gray-900 { color: #eaf2e7; }
+html.dark .text-gray-800 { color: #dbe6dc; }
+html.dark .text-gray-700 { color: #c3d0c5; }
+html.dark .text-gray-600 { color: #a7b7aa; }
+html.dark .text-gray-500 { color: #8a9c8f; }
+html.dark .text-gray-400 { color: #6f8377; }
+
+/* Bordes y divisores */
+html.dark .border-gray-100 { border-color: #1a2820; }
+html.dark .border-gray-200 { border-color: #23332a; }
+html.dark .border-gray-300 { border-color: #2c3d33; }
+html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #23332a; }
+
+/* Washes de color (-50): tiles de icono y fondos suaves */
+html.dark .bg-brand-50 { background-color: #16250f; }
+html.dark .bg-green-50 { background-color: #16250f; }
+html.dark .bg-blue-50 { background-color: #112033; }
+html.dark .bg-indigo-50 { background-color: #171733; }
+html.dark .bg-purple-50 { background-color: #1e1533; }
+html.dark .bg-violet-50 { background-color: #1e1533; }
+html.dark .bg-orange-50 { background-color: #291f10; }
+html.dark .bg-amber-50 { background-color: #29200f; }
+html.dark .bg-yellow-50 { background-color: #282206; }
+html.dark .bg-red-50 { background-color: #2a1615; }
+html.dark .bg-rose-50 { background-color: #2a1520; }
+html.dark .bg-teal-50 { background-color: #0d2422; }
+
+/* Chips de color (-100) */
+html.dark .bg-brand-100 { background-color: #18320f; }
+html.dark .bg-green-100 { background-color: #18320f; }
+html.dark .bg-blue-100 { background-color: #15273d; }
+html.dark .bg-purple-100 { background-color: #241a3a; }
+html.dark .bg-orange-100 { background-color: #33260f; }
+html.dark .bg-amber-100 { background-color: #33280c; }
+html.dark .bg-yellow-100 { background-color: #332808; }
+html.dark .bg-red-100 { background-color: #391f1d; }
+html.dark .bg-rose-100 { background-color: #38182a; }
+
+/* Texto de color: se aclara para mantener contraste sobre fondo oscuro */
+html.dark .text-brand-600, html.dark .text-brand-700, html.dark .text-brand-800 { color: #86dd5f; }
+html.dark .text-green-600, html.dark .text-green-700, html.dark .text-green-800 { color: #86dd5f; }
+html.dark .text-blue-600, html.dark .text-blue-700, html.dark .text-blue-800 { color: #7fb0ff; }
+html.dark .text-purple-600, html.dark .text-purple-700, html.dark .text-purple-800 { color: #c6a3ff; }
+html.dark .text-orange-600, html.dark .text-orange-700, html.dark .text-orange-800 { color: #f0ad68; }
+html.dark .text-amber-600, html.dark .text-amber-700, html.dark .text-amber-800 { color: #ecc25a; }
+html.dark .text-yellow-600, html.dark .text-yellow-700, html.dark .text-yellow-800 { color: #e6c552; }
+html.dark .text-red-600, html.dark .text-red-700, html.dark .text-red-800 { color: #f2908c; }
+html.dark .text-rose-600, html.dark .text-rose-700 { color: #f593b4; }
+
+/* Estados hover neutros */
+html.dark .hover\:bg-gray-50:hover { background-color: #1a271f; }
+html.dark .hover\:bg-gray-100:hover { background-color: #22332a; }
+html.dark .hover\:bg-gray-200:hover { background-color: #2a3c31; }
+
+/* Placeholders */
+html.dark .placeholder\:text-gray-400::placeholder { color: #5f7367; }
+html.dark .placeholder\:text-gray-500::placeholder { color: #6f8377; }
+
+/* Skeleton y scrollbar en oscuro */
+html.dark .skeleton { background: #1c2a22; }
+html.dark .skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+}
+html.dark * { scrollbar-color: #2c3d33 transparent; }
+html.dark *::-webkit-scrollbar-thumb { background: #2c3d33; background-clip: content-box; }
+html.dark *::-webkit-scrollbar-thumb:hover { background: #3a4d40; background-clip: content-box; }
+html.dark ::selection { background: #234a12; color: #d6ecc6; }

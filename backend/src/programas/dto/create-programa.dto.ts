@@ -35,7 +35,8 @@ export class CreateProgramaDto {
     enum: ['TECNICO', 'TECNOLOGO', 'ESPECIALIZACION', 'OPERARIO', 'AUXILIAR'],
   })
   @IsEnum(['TECNICO', 'TECNOLOGO', 'ESPECIALIZACION', 'OPERARIO', 'AUXILIAR'], {
-    message: 'El nivel de formación debe ser: TECNICO, TECNOLOGO, ESPECIALIZACION, OPERARIO o AUXILIAR',
+    message:
+      'El nivel de formación debe ser: TECNICO, TECNOLOGO, ESPECIALIZACION, OPERARIO o AUXILIAR',
   })
   @IsNotEmpty({ message: 'El nivel de formación es requerido' })
   nivelFormacion: string;

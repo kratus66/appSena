@@ -5,19 +5,24 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Aprendiz } from './entities/aprendiz.entity';
 import { CreateAprendizDto } from './dto/create-aprendiz.dto';
 import { UpdateAprendizDto } from './dto/update-aprendiz.dto';
 import { UpdateEstadoAprendizDto } from './dto/update-estado-aprendiz.dto';
 import { QueryAprendizDto } from './dto/query-aprendiz.dto';
 import { User, UserRole } from '../users/entities/user.entity';
+import { canAccessFicha, applyFichaScope } from '../common/utils/ficha-access.util';
+import { Ficha } from '../fichas/entities/ficha.entity';
 
 @Injectable()
 export class AprendicesService {
   constructor(
     @InjectRepository(Aprendiz)
     private readonly aprendizRepository: Repository<Aprendiz>,
+    @InjectRepository(Ficha)
+    private readonly fichaRepository: Repository<Ficha>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(createAprendizDto: CreateAprendizDto, user: User): Promise<Aprendiz> {
@@ -45,25 +50,87 @@ export class AprendicesService {
       }
     }
 
-    // Validar permisos: INSTRUCTOR solo puede crear en sus fichas
-    if (user.rol === UserRole.INSTRUCTOR) {
-      // TODO: Verificar que la ficha pertenece al instructor
-      // Esto requiere acceso al fichaRepository o hacer la query aquí
+    // Validar permisos: instructor solo en sus fichas, coordinador solo en su colegio
+    const ficha = await this.fichaRepository.findOne({ where: { id: createAprendizDto.fichaId } });
+    if (!ficha) {
+      throw new NotFoundException(`No se encontró la ficha con ID ${createAprendizDto.fichaId}`);
+    }
+    if (!canAccessFicha(user, ficha)) {
+      throw new ForbiddenException('No tienes permisos para crear aprendices en esta ficha');
     }
 
-    const aprendiz = this.aprendizRepository.create({
-      ...createAprendizDto,
-      createdById: user.id,
-    });
+    const { userId, password, ...aprendizData } = createAprendizDto;
 
-    return await this.aprendizRepository.save(aprendiz);
+    // Usuario + aprendiz se crean en una sola transacción: si algo falla,
+    // no queda un usuario huérfano sin aprendiz (ni al revés).
+    return this.dataSource.transaction(async (manager) => {
+      const userRepo = manager.getRepository(User);
+      let aprendizUserId = userId;
+
+      if (aprendizUserId) {
+        // Vincular a un usuario existente indicado explícitamente
+        const existente = await userRepo.findOne({ where: { id: aprendizUserId } });
+        if (!existente) {
+          throw new NotFoundException(`No se encontró el usuario con ID ${aprendizUserId}`);
+        }
+      } else {
+        // Reutilizar el usuario por documento si ya existe; si no, crearlo
+        const usuarioPorDocumento = await userRepo.findOne({
+          where: { documento: aprendizData.documento },
+        });
+
+        if (usuarioPorDocumento) {
+          aprendizUserId = usuarioPorDocumento.id;
+        } else {
+          // Si se envió email, verificar que no esté en uso por otro usuario
+          if (aprendizData.email) {
+            const emailEnUso = await userRepo.findOne({
+              where: { email: aprendizData.email },
+            });
+            if (emailEnUso) {
+              throw new ConflictException(
+                `El email ${aprendizData.email} ya está en uso por otro usuario`,
+              );
+            }
+          }
+
+          const nuevoUsuario = userRepo.create({
+            nombre: `${aprendizData.nombres} ${aprendizData.apellidos}`,
+            email: aprendizData.email || `${aprendizData.documento}@sena.edu.co`,
+            documento: aprendizData.documento,
+            telefono: aprendizData.telefono || undefined,
+            password: password || aprendizData.documento, // @BeforeInsert lo hashea
+            rol: UserRole.APRENDIZ,
+            createdById: user.id,
+          });
+          const usuarioGuardado = await userRepo.save(nuevoUsuario);
+          aprendizUserId = usuarioGuardado.id;
+        }
+      }
+
+      const aprendiz = manager.getRepository(Aprendiz).create({
+        ...aprendizData,
+        userId: aprendizUserId,
+        createdById: user.id,
+      });
+
+      return manager.getRepository(Aprendiz).save(aprendiz);
+    });
   }
 
   async findAll(
     queryDto: QueryAprendizDto,
     user: User,
   ): Promise<{ data: Aprendiz[]; total: number; page: number; limit: number }> {
-    const { page = 1, limit = 10, search, fichaId, colegioId, programaId, estadoAcademico } = queryDto;
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      fichaId,
+      colegioId,
+      programaId,
+      estadoAcademico,
+    } = queryDto;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.aprendizRepository
@@ -73,12 +140,8 @@ export class AprendicesService {
       .leftJoinAndSelect('ficha.programa', 'programa')
       .leftJoinAndSelect('aprendiz.user', 'user');
 
-    // Restricción por rol: INSTRUCTOR solo ve aprendices de sus fichas
-    if (user.rol === UserRole.INSTRUCTOR) {
-      queryBuilder.andWhere('ficha.instructorId = :instructorId', {
-        instructorId: user.id,
-      });
-    }
+    // Alcance obligatorio: instructor → sus fichas, coordinador → su colegio
+    applyFichaScope(queryBuilder, user, 'ficha');
 
     // Filtros
     if (fichaId) {
@@ -106,10 +169,7 @@ export class AprendicesService {
     }
 
     // Orden y paginación
-    queryBuilder
-      .orderBy('aprendiz.createdAt', 'DESC')
-      .skip(skip)
-      .take(limit);
+    queryBuilder.orderBy('aprendiz.createdAt', 'DESC').skip(skip).take(limit);
 
     const [data, total] = await queryBuilder.getManyAndCount();
 
@@ -131,8 +191,8 @@ export class AprendicesService {
       throw new NotFoundException(`Aprendiz con ID ${id} no encontrado`);
     }
 
-    // Validar permisos: INSTRUCTOR solo puede ver aprendices de sus fichas
-    if (user.rol === UserRole.INSTRUCTOR && aprendiz.ficha.instructorId !== user.id) {
+    // Validar permisos: instructor → sus fichas, coordinador → su colegio
+    if (!canAccessFicha(user, aprendiz.ficha)) {
       throw new ForbiddenException('No tienes permisos para ver este aprendiz');
     }
 
@@ -142,10 +202,7 @@ export class AprendicesService {
   async update(id: string, updateAprendizDto: UpdateAprendizDto, user: User): Promise<Aprendiz> {
     const aprendiz = await this.findOne(id, user);
 
-    // Validar permisos: INSTRUCTOR solo puede actualizar aprendices de sus fichas
-    if (user.rol === UserRole.INSTRUCTOR && aprendiz.ficha.instructorId !== user.id) {
-      throw new ForbiddenException('No tienes permisos para actualizar este aprendiz');
-    }
+    // findOne ya validó el acceso a la ficha del aprendiz
 
     // Verificar email único si se está cambiando
     if (updateAprendizDto.email && updateAprendizDto.email !== aprendiz.email) {
@@ -154,7 +211,9 @@ export class AprendicesService {
       });
 
       if (emailExistente) {
-        throw new ConflictException(`Ya existe un aprendiz con el email ${updateAprendizDto.email}`);
+        throw new ConflictException(
+          `Ya existe un aprendiz con el email ${updateAprendizDto.email}`,
+        );
       }
     }
 
@@ -171,7 +230,9 @@ export class AprendicesService {
   ): Promise<Aprendiz> {
     // Solo COORDINADOR y ADMIN pueden cambiar estado
     if (user.rol !== UserRole.COORDINADOR && user.rol !== UserRole.ADMIN) {
-      throw new ForbiddenException('Solo coordinadores y administradores pueden cambiar el estado académico');
+      throw new ForbiddenException(
+        'Solo coordinadores y administradores pueden cambiar el estado académico',
+      );
     }
 
     const aprendiz = await this.aprendizRepository.findOne({
@@ -181,6 +242,12 @@ export class AprendicesService {
 
     if (!aprendiz) {
       throw new NotFoundException(`Aprendiz con ID ${id} no encontrado`);
+    }
+
+    // Alcance obligatorio: un COORDINADOR solo puede cambiar el estado de
+    // aprendices de su propio colegio (evita fuga entre colegios).
+    if (!canAccessFicha(user, aprendiz.ficha)) {
+      throw new ForbiddenException('No tienes permisos para cambiar el estado de este aprendiz');
     }
 
     aprendiz.estadoAcademico = updateEstadoDto.estadoAcademico;
@@ -209,12 +276,7 @@ export class AprendicesService {
       .leftJoinAndSelect('aprendiz.ficha', 'ficha')
       .where('aprendiz.fichaId = :fichaId', { fichaId });
 
-    // Restricción por rol
-    if (user.rol === UserRole.INSTRUCTOR) {
-      queryBuilder.andWhere('ficha.instructorId = :instructorId', {
-        instructorId: user.id,
-      });
-    }
+    applyFichaScope(queryBuilder, user, 'ficha');
 
     return await queryBuilder.getMany();
   }

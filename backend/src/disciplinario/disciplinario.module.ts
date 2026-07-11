@@ -8,14 +8,7 @@ import { Ficha } from '../fichas/entities/ficha.entity';
 import { Aprendiz } from '../aprendices/entities/aprendiz.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      DisciplinaryCase,
-      CaseAction,
-      Ficha,
-      Aprendiz,
-    ]),
-  ],
+  imports: [TypeOrmModule.forFeature([DisciplinaryCase, CaseAction, Ficha, Aprendiz])],
   controllers: [DisciplinarioController],
   providers: [DisciplinarioService],
   exports: [DisciplinarioService],

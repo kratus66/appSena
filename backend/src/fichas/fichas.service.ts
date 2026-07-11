@@ -2,7 +2,6 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
-  ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,6 +14,7 @@ import { UpdateFichaEstadoDto } from './dto/update-ficha-estado.dto';
 import { QueryFichaDto } from './dto/query-ficha.dto';
 import { User, UserRole } from '../users/entities/user.entity';
 import { Aprendiz, TipoDocumento, EstadoAcademico } from '../aprendices/entities/aprendiz.entity';
+import { applyFichaScope, assertFichaAccess } from '../common/utils/ficha-access.util';
 
 @Injectable()
 export class FichasService {
@@ -44,8 +44,20 @@ export class FichasService {
     return await this.fichaRepository.save(ficha);
   }
 
-  async findAll(queryDto: QueryFichaDto): Promise<{ data: Ficha[]; total: number; page: number; limit: number }> {
-    const { page = 1, limit = 10, search, instructorId, colegioId, programaId, estado, jornada } = queryDto;
+  async findAll(
+    queryDto: QueryFichaDto,
+    user?: User,
+  ): Promise<{ data: Ficha[]; total: number; page: number; limit: number }> {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      instructorId,
+      colegioId,
+      programaId,
+      estado,
+      jornada,
+    } = queryDto;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.fichaRepository
@@ -55,7 +67,11 @@ export class FichasService {
       .leftJoinAndSelect('ficha.instructor', 'instructor')
       .loadRelationCountAndMap('ficha.aprendicesCount', 'ficha.aprendices');
 
-    // Filtrar por instructorId si se proporciona (para pruebas sin autenticación)
+    // Alcance obligatorio según el usuario autenticado (instructor → sus fichas,
+    // coordinador → su colegio, admin/desarrollador → sin restricción).
+    applyFichaScope(queryBuilder, user);
+
+    // Filtro opcional adicional (ej. admin acotando por instructor puntual)
     if (instructorId) {
       queryBuilder.andWhere('ficha.instructorId = :instructorId', { instructorId });
     }
@@ -78,7 +94,9 @@ export class FichasService {
     }
 
     if (queryDto.dependencia) {
-      queryBuilder.andWhere('ficha.dependencia = :dependencia', { dependencia: queryDto.dependencia });
+      queryBuilder.andWhere('ficha.dependencia = :dependencia', {
+        dependencia: queryDto.dependencia,
+      });
     }
 
     if (search) {
@@ -86,10 +104,7 @@ export class FichasService {
     }
 
     // Orden y paginación
-    queryBuilder
-      .orderBy('ficha.createdAt', 'DESC')
-      .skip(skip)
-      .take(limit);
+    queryBuilder.orderBy('ficha.createdAt', 'DESC').skip(skip).take(limit);
 
     const [data, total] = await queryBuilder.getManyAndCount();
 
@@ -101,26 +116,28 @@ export class FichasService {
     };
   }
 
-  async findMine(queryDto: QueryFichaDto): Promise<{ data: Ficha[]; total: number; page: number; limit: number }> {
-    // Verificar que se proporcione instructorId
-    if (!queryDto.instructorId) {
-      throw new ForbiddenException('Debe proporcionar el instructorId como parámetro');
-    }
-
-    // Buscar todas las fichas del instructor usando la relación en la base de datos
-    return this.findAll(queryDto);
+  async findMine(
+    queryDto: QueryFichaDto,
+    user: User,
+  ): Promise<{ data: Ficha[]; total: number; page: number; limit: number }> {
+    // El instructor siempre se toma del usuario autenticado, nunca de un parámetro del cliente
+    return this.findAll({ ...queryDto, instructorId: user.id }, user);
   }
 
-  async findGrouped(queryDto: QueryFichaDto): Promise<any[]> {
+  async findGrouped(queryDto: QueryFichaDto, user?: User): Promise<any[]> {
     const queryBuilder = this.fichaRepository
       .createQueryBuilder('ficha')
       .leftJoinAndSelect('ficha.colegio', 'colegio')
       .leftJoinAndSelect('ficha.programa', 'programa')
       .leftJoinAndSelect('ficha.instructor', 'instructor');
 
+    applyFichaScope(queryBuilder, user);
+
     // Si se proporciona instructorId, filtrar por ese instructor
     if (queryDto.instructorId) {
-      queryBuilder.andWhere('ficha.instructorId = :instructorId', { instructorId: queryDto.instructorId });
+      queryBuilder.andWhere('ficha.instructorId = :instructorId', {
+        instructorId: queryDto.instructorId,
+      });
     }
 
     // Aplicar filtros básicos
@@ -188,7 +205,7 @@ export class FichasService {
     return agrupado;
   }
 
-  async findOne(id: string): Promise<Ficha> {
+  async findOne(id: string, user?: User): Promise<Ficha> {
     const ficha = await this.fichaRepository.findOne({
       where: { id },
       relations: ['colegio', 'programa', 'instructor'],
@@ -198,11 +215,13 @@ export class FichasService {
       throw new NotFoundException(`Ficha con ID ${id} no encontrada`);
     }
 
+    assertFichaAccess(user, ficha, 'No tienes permisos para ver esta ficha');
+
     return ficha;
   }
 
-  async update(id: string, updateFichaDto: UpdateFichaDto): Promise<Ficha> {
-    const ficha = await this.findOne(id);
+  async update(id: string, updateFichaDto: UpdateFichaDto, user?: User): Promise<Ficha> {
+    const ficha = await this.findOne(id, user);
 
     // Si están cambiando el número, verificar que no exista
     if (updateFichaDto.numeroFicha && updateFichaDto.numeroFicha !== ficha.numeroFicha) {
@@ -222,21 +241,15 @@ export class FichasService {
     await this.fichaRepository.update(id, updateFichaDto);
 
     // Recargar la entidad con todas las relaciones actualizadas
-    return this.findOne(id);
+    return this.findOne(id, user);
   }
 
   async updateEstado(
     id: string,
     updateEstadoDto: UpdateFichaEstadoDto,
+    user?: User,
   ): Promise<Ficha> {
-    const ficha = await this.fichaRepository.findOne({
-      where: { id },
-      relations: ['colegio', 'programa', 'instructor'],
-    });
-
-    if (!ficha) {
-      throw new NotFoundException(`Ficha con ID ${id} no encontrada`);
-    }
+    const ficha = await this.findOne(id, user);
 
     ficha.estado = updateEstadoDto.estado;
 
@@ -254,9 +267,10 @@ export class FichasService {
   async importarAprendicesDesdeExcel(
     fichaId: string,
     fileBuffer: Buffer,
+    user?: User,
   ): Promise<{ creados: number; omitidos: number; errores: string[] }> {
-    // Verificar que la ficha existe
-    await this.findOne(fichaId);
+    // Verificar que la ficha existe y que el usuario tiene acceso a ella
+    await this.findOne(fichaId, user);
 
     let rows: any[];
     try {
@@ -273,12 +287,23 @@ export class FichasService {
     }
 
     const normalizeKey = (obj: any, ...aliases: string[]): string => {
-      const keys = Object.keys(obj).map((k) => k.trim().toLowerCase().replace(/[^a-z]/g, ''));
+      const keys = Object.keys(obj).map((k) =>
+        k
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z]/g, ''),
+      );
       for (const alias of aliases) {
         const a = alias.toLowerCase().replace(/[^a-z]/g, '');
         const found = keys.find((k) => k === a);
         if (found) {
-          const original = Object.keys(obj).find((k) => k.trim().toLowerCase().replace(/[^a-z]/g, '') === found);
+          const original = Object.keys(obj).find(
+            (k) =>
+              k
+                .trim()
+                .toLowerCase()
+                .replace(/[^a-z]/g, '') === found,
+          );
           return original ? String(obj[original]).trim() : '';
         }
       }
@@ -286,7 +311,10 @@ export class FichasService {
     };
 
     const TIPO_DOC_MAP: Record<string, TipoDocumento> = {
-      cc: TipoDocumento.CC, ti: TipoDocumento.TI, ce: TipoDocumento.CE, pas: TipoDocumento.PAS,
+      cc: TipoDocumento.CC,
+      ti: TipoDocumento.TI,
+      ce: TipoDocumento.CE,
+      pas: TipoDocumento.PAS,
     };
 
     let creados = 0;
@@ -306,9 +334,18 @@ export class FichasService {
         const telefono = normalizeKey(row, 'telefono', 'celular', 'tel');
         const direccion = normalizeKey(row, 'direccion', 'direccion', 'dir');
 
-        if (!nombres) { errores.push(`Fila ${rowNum}: campo 'nombres' requerido`); continue; }
-        if (!apellidos) { errores.push(`Fila ${rowNum}: campo 'apellidos' requerido`); continue; }
-        if (!documento) { errores.push(`Fila ${rowNum}: campo 'documento' requerido`); continue; }
+        if (!nombres) {
+          errores.push(`Fila ${rowNum}: campo 'nombres' requerido`);
+          continue;
+        }
+        if (!apellidos) {
+          errores.push(`Fila ${rowNum}: campo 'apellidos' requerido`);
+          continue;
+        }
+        if (!documento) {
+          errores.push(`Fila ${rowNum}: campo 'documento' requerido`);
+          continue;
+        }
 
         const tipoDocumento: TipoDocumento = TIPO_DOC_MAP[tipoDocStr] || TipoDocumento.CC;
 
@@ -324,9 +361,7 @@ export class FichasService {
         if (!user) {
           const emailFinal = email || `${documento}@sena.edu.co`;
           // Si el email ya existe, usar uno generado
-          const emailEnUso = email
-            ? await this.userRepository.findOne({ where: { email } })
-            : null;
+          const emailEnUso = email ? await this.userRepository.findOne({ where: { email } }) : null;
           const emailDefinitivo = emailEnUso ? `${documento}@sena.edu.co` : emailFinal;
 
           user = this.userRepository.create({

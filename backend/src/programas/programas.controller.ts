@@ -7,9 +7,7 @@ import {
   Param,
   Delete,
   Query,
-  ParseIntPipe,
-  HttpCode,
-  HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,18 +15,26 @@ import {
   ApiResponse,
   ApiQuery,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ProgramasService } from './programas.service';
 import { CreateProgramaDto } from './dto/create-programa.dto';
 import { UpdateProgramaDto } from './dto/update-programa.dto';
 import { Programa } from './entities/programa.entity';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
 
 @ApiTags('Programas de Formación')
+@ApiBearerAuth()
 @Controller('programas')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ProgramasController {
   constructor(private readonly programasService: ProgramasService) {}
 
   @Post()
+  @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Crear un nuevo programa de formación',
     description: 'Registra un nuevo programa de formación en el sistemas (HU-PR-01)',
@@ -45,6 +51,7 @@ export class ProgramasController {
   }
 
   @Get()
+  @Roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.INSTRUCTOR)
   @ApiOperation({
     summary: 'Listar todos los programas',
     description: 'Obtiene la lista de programas de formación, con filtros opcionales (HU-PR-02)',
@@ -76,6 +83,7 @@ export class ProgramasController {
   }
 
   @Get('estadisticas')
+  @Roles(UserRole.ADMIN, UserRole.COORDINADOR)
   @ApiOperation({
     summary: 'Obtener estadísticas de programas',
     description: 'Obtiene estadísticas generales de los programas de formación',
@@ -89,6 +97,7 @@ export class ProgramasController {
   }
 
   @Get('codigo/:codigo')
+  @Roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.INSTRUCTOR)
   @ApiOperation({
     summary: 'Buscar programa por código',
     description: 'Obtiene un programa específico por su código SENA',
@@ -105,6 +114,7 @@ export class ProgramasController {
   }
 
   @Get('area/:area')
+  @Roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.INSTRUCTOR)
   @ApiOperation({
     summary: 'Buscar programas por área de conocimiento',
     description: 'Obtiene todos los programas activos de un área específica',
@@ -120,14 +130,15 @@ export class ProgramasController {
   }
 
   @Get('nivel/:nivel')
+  @Roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.INSTRUCTOR)
   @ApiOperation({
     summary: 'Buscar programas por nivel de formación',
     description: 'Obtiene todos los programas activos de un nivel específico',
   })
-  @ApiParam({ 
-    name: 'nivel', 
+  @ApiParam({
+    name: 'nivel',
     example: 'TECNOLOGO',
-    enum: ['TECNICO', 'TECNOLOGO', 'ESPECIALIZACION', 'OPERARIO', 'AUXILIAR']
+    enum: ['TECNICO', 'TECNOLOGO', 'ESPECIALIZACION', 'OPERARIO', 'AUXILIAR'],
   })
   @ApiResponse({
     status: 200,
@@ -139,6 +150,7 @@ export class ProgramasController {
   }
 
   @Get(':id')
+  @Roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.INSTRUCTOR)
   @ApiOperation({
     summary: 'Obtener un programa por ID',
     description: 'Obtiene la información detallada de un programa específico',
@@ -155,6 +167,7 @@ export class ProgramasController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Actualizar un programa',
     description: 'Actualiza la información de un programa existente',
@@ -167,14 +180,12 @@ export class ProgramasController {
   })
   @ApiResponse({ status: 404, description: 'Programa no encontrado' })
   @ApiResponse({ status: 409, description: 'Ya existe un programa con ese código' })
-  update(
-    @Param('id') id: string,
-    @Body() updateProgramaDto: UpdateProgramaDto,
-  ): Promise<Programa> {
+  update(@Param('id') id: string, @Body() updateProgramaDto: UpdateProgramaDto): Promise<Programa> {
     return this.programasService.update(id, updateProgramaDto);
   }
 
   @Patch(':id/toggle-activo')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Activar/Desactivar un programa',
     description: 'Cambia el estado activo de un programa',
@@ -191,6 +202,7 @@ export class ProgramasController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Eliminar un programa',
     description: 'Elimina permanentemente un programa del sistema',

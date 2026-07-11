@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { confirmDialog } from '@/components/ui/confirm-dialog';
+import toast from 'react-hot-toast';
 import {
   Dialog,
   DialogContent,
@@ -58,14 +60,14 @@ export function EventDetailsDialog({ event, open, onOpenChange, onSuccess }: Eve
   };
 
   const handleChangeEstado = async (nuevoEstado: string) => {
-    if (!confirm(`¿Cambiar estado del evento a ${nuevoEstado}?`)) return;
+    if (!(await confirmDialog(`¿Cambiar estado del evento a ${nuevoEstado}?`))) return;
 
     setLoading(true);
     try {
       await api.patch(`/agenda/eventos/${event.id}/estado`, { estado: nuevoEstado });
       onSuccess();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al cambiar estado');
+      toast.error(error.response?.data?.message || 'Error al cambiar estado');
     } finally {
       setLoading(false);
     }
@@ -84,20 +86,20 @@ export function EventDetailsDialog({ event, open, onOpenChange, onSuccess }: Eve
       setShowReminderForm(false);
       fetchRecordatorios();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al crear recordatorio');
+      toast.error(error.response?.data?.message || 'Error al crear recordatorio');
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancelReminder = async (reminderId: string) => {
-    if (!confirm('¿Cancelar este recordatorio?')) return;
+    if (!(await confirmDialog('¿Cancelar este recordatorio?'))) return;
 
     try {
       await api.patch(`/agenda/recordatorios/${reminderId}/cancelar`);
       fetchRecordatorios();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al cancelar recordatorio');
+      toast.error(error.response?.data?.message || 'Error al cancelar recordatorio');
     }
   };
 

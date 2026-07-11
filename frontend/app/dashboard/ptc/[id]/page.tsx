@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { confirmDialog } from '@/components/ui/confirm-dialog';
 import { useRouter, useParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { api } from '@/lib/api';
@@ -80,7 +81,7 @@ export default function PtcDetailPage() {
       CERRADO: '¿Cerrar este PTC? Esta acción no se puede deshacer.',
     };
 
-    if (!confirm(confirmMessages[nuevoEstado as keyof typeof confirmMessages])) return;
+    if (!(await confirmDialog(confirmMessages[nuevoEstado as keyof typeof confirmMessages]))) return;
 
     try {
       setUpdating(true);
@@ -95,7 +96,7 @@ export default function PtcDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm('¿Eliminar este PTC? Esta acción no se puede deshacer.')) return;
+    if (!(await confirmDialog('¿Eliminar este PTC? Esta acción no se puede deshacer.'))) return;
 
     try {
       setUpdating(true);

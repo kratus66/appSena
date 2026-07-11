@@ -18,6 +18,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       rol: user.rol,
+      tokenVersion: user.tokenVersion,
     };
 
     return {
@@ -53,11 +54,22 @@ export class AuthService {
 
   async validateToken(payload: JwtPayload) {
     const user = await this.usersService.findOne(payload.sub);
-    
+
     if (!user || !user.activo) {
       throw new UnauthorizedException('Usuario no autorizado');
     }
 
+    // Token emitido antes del último logout/revocación: ya no es válido
+    // aunque su firma y expiración sigan siendo correctas (ver SEC-7).
+    if (payload.tokenVersion !== user.tokenVersion) {
+      throw new UnauthorizedException('La sesión fue cerrada, inicia sesión nuevamente');
+    }
+
     return user;
+  }
+
+  /** Invalida todos los tokens emitidos hasta ahora para este usuario (logout real). */
+  async revokeSession(userId: string): Promise<void> {
+    await this.usersService.incrementTokenVersion(userId);
   }
 }

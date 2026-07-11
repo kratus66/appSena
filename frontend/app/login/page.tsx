@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import api from '@/lib/api';
+import { Logo, LogoMark } from '@/components/ui/logo';
 import { ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
@@ -22,18 +23,12 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      // El backend setea la cookie httpOnly con la sesión; acá solo guardamos
+      // el perfil (no sensible) que devuelve para pintar nombre/rol en la UI.
       const response = await api.post('/auth/login', { email, password });
-      const { access_token } = response.data;
+      const { user } = response.data;
 
-      // Guardar token
-      localStorage.setItem('token', access_token);
-
-      // Decodificar token para obtener rol (simple, sin jwt-decode)
-      const base64Url = access_token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const payload = JSON.parse(window.atob(base64));
-
-      localStorage.setItem('user', JSON.stringify(payload));
+      localStorage.setItem('user', JSON.stringify(user));
 
       router.push('/dashboard');
     } catch (err: any) {
@@ -44,19 +39,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100">
+    <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-brand-50">
       {/* Navbar */}
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center">
-              <div className="h-10 w-10 bg-green-600 rounded-full flex items-center justify-center">
-                <span className="text-xl font-bold text-white">AS</span>
-              </div>
-              <span className="ml-3 text-xl font-bold text-gray-900">AppSena</span>
+            <Link href="/">
+              <Logo size={40} />
             </Link>
             <Link href="/register">
-              <Button className="bg-green-600 hover:bg-green-700">Registrarse</Button>
+              <Button>Registrarse</Button>
             </Link>
           </div>
         </div>
@@ -75,9 +67,7 @@ export default function LoginPage() {
               </Link>
             </div>
             <div className="flex justify-center mb-4">
-              <div className="h-16 w-16 bg-green-600 rounded-full flex items-center justify-center">
-                <span className="text-2xl font-bold text-white">AS</span>
-              </div>
+              <LogoMark size={64} />
             </div>
             <CardTitle className="text-3xl font-bold text-center">Iniciar Sesión</CardTitle>
             <p className="text-center text-gray-500">
@@ -138,9 +128,9 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <Button 
-                type="submit" 
-                className="w-full bg-green-600 hover:bg-green-700" 
+              <Button
+                type="submit"
+                className="w-full"
                 disabled={loading}
               >
                 {loading ? (
@@ -160,6 +150,7 @@ export default function LoginPage() {
                 </Link>
               </div>
 
+              {process.env.NODE_ENV !== 'production' && (
               <div className="mt-4">
                 <p className="text-xs text-gray-400 mb-2 text-center uppercase tracking-wide">Acceso rápido de prueba</p>
                 <div className="grid grid-cols-2 gap-2">
@@ -197,7 +188,15 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
+              )}
             </form>
+            <p className="mt-6 text-center text-xs text-gray-400">
+              Al iniciar sesión aceptas nuestra{' '}
+              <Link href="/privacidad" className="underline hover:text-gray-600">
+                política de tratamiento de datos
+              </Link>
+              .
+            </p>
           </CardContent>
         </Card>
       </div>

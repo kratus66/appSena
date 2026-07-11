@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { SkeletonCards } from '@/components/ui/skeleton';
+import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -125,7 +127,7 @@ export default function FichasPage() {
       setDeleteConfirm(null);
       fetchFichas();
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Error al eliminar la ficha');
+      toast.error(err?.response?.data?.message || 'Error al eliminar la ficha');
     } finally {
       setDeleteLoading(false);
     }
@@ -157,7 +159,7 @@ export default function FichasPage() {
       setImportResult({ fichaId: importingFichaId, ...res.data });
       fetchFichas();
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Error al importar el archivo');
+      toast.error(err?.response?.data?.message || 'Error al importar el archivo');
     } finally {
       setImportLoading(false);
       setImportingFichaId(null);
@@ -384,7 +386,7 @@ export default function FichasPage() {
 
         {/* Grid */}
         {loading ? (
-          <div className="text-center py-16 text-gray-400">Cargando...</div>
+          <SkeletonCards count={6} />
         ) : fichas.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
             <FileText className="mx-auto h-10 w-10 mb-3 opacity-40" />

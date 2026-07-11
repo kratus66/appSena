@@ -4,6 +4,7 @@ import React from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { NotificationsDropdown } from '@/components/dashboard/notifications-dropdown';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export function Navbar() {
   return (
@@ -21,7 +22,8 @@ export function Navbar() {
         </div>
       </div>
 
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-2">
+        <ThemeToggle />
         <NotificationsDropdown />
       </div>
     </header>

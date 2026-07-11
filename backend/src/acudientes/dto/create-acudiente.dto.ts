@@ -59,7 +59,9 @@ export class CreateAcudienteDto {
     description: 'Parentesco con el aprendiz',
     enum: Parentesco,
   })
-  @IsEnum(Parentesco, { message: 'El parentesco debe ser MADRE, PADRE, HERMANO, TIO, ABUELO u OTRO' })
+  @IsEnum(Parentesco, {
+    message: 'El parentesco debe ser MADRE, PADRE, HERMANO, TIO, ABUELO u OTRO',
+  })
   @IsNotEmpty({ message: 'El parentesco es requerido' })
   parentesco: Parentesco;
 }

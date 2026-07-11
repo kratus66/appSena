@@ -8,9 +8,7 @@ import { Ficha } from '../fichas/entities/ficha.entity';
 import { Aprendiz } from '../aprendices/entities/aprendiz.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([ClaseSesion, Asistencia, Ficha, Aprendiz]),
-  ],
+  imports: [TypeOrmModule.forFeature([ClaseSesion, Asistencia, Ficha, Aprendiz])],
   controllers: [AsistenciasController],
   providers: [AsistenciasService],
   exports: [AsistenciasService],

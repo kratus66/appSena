@@ -2,8 +2,6 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
-  ManyToOne,
-  JoinColumn,
   PrimaryGeneratedColumn,
   Column,
 } from 'typeorm';

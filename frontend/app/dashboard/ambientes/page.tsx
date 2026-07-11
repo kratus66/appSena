@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { confirmDialog } from '@/components/ui/confirm-dialog';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import {
   Ambiente, EstadoAmbiente, TableroData, TableroRow, TableroCell,
@@ -391,7 +392,7 @@ export default function AmbientesPage() {
   };
 
   const handleLiberarBloque = async (asignacionId: string) => {
-    if (!confirm('¿Liberar este bloque?')) return;
+    if (!(await confirmDialog('¿Liberar este bloque?'))) return;
     await api.delete(`/ambientes/asignaciones/${asignacionId}`);
     await refreshTablero();
     showToast('Bloque liberado');
@@ -411,7 +412,7 @@ export default function AmbientesPage() {
   };
 
   const handleEliminarAmbiente = async (id: string) => {
-    if (!confirm('¿Eliminar este ambiente? Esta acción no se puede deshacer.')) return;
+    if (!(await confirmDialog('¿Eliminar este ambiente? Esta acción no se puede deshacer.'))) return;
     await api.delete(`/ambientes/${id}`);
     await refreshTablero();
     showToast('Ambiente eliminado');

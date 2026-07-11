@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useRouter, useParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,7 +47,7 @@ export default function EditarCasoPage() {
       });
     } catch (error) {
       console.error('Error al obtener caso:', error);
-      alert('Error al cargar los datos del caso');
+      toast.error('Error al cargar los datos del caso');
     } finally {
       setLoadingData(false);
     }
@@ -67,12 +68,12 @@ export default function EditarCasoPage() {
       };
       
       await api.patch(`/disciplinario/casos/${params.id}`, payload);
-      alert('Caso actualizado exitosamente');
+      toast.success('Caso actualizado exitosamente');
       router.push(`/dashboard/disciplinario/${params.id}`);
     } catch (error: any) {
       console.error('Error al actualizar caso:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Error al actualizar el caso';
-      alert(`Error: ${errorMessage}`);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

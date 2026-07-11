@@ -311,6 +311,22 @@ aws lightsail push-container-image `
 }
 ```
 
+### Paso 1.5: Ejecutar migraciones de base de datos
+
+Antes de desplegar la nueva imagen, aplicá las migraciones pendientes contra el RDS de producción (ver [PRODUCTION_READINESS.md#OPS-1](./PRODUCTION_READINESS.md)). El esquema ya no se sincroniza automáticamente en producción (`synchronize: false`), así que este paso es obligatorio cuando una migración nueva se agregó en `backend/src/database/migrations/`:
+
+```bash
+cd backend
+DB_HOST=appsena-db.cxxx.us-east-1.rds.amazonaws.com \
+DB_PORT=5432 \
+DB_USERNAME=appsena_admin \
+DB_PASSWORD=TU_PASSWORD_SEGURO \
+DB_DATABASE=appsena \
+npm run migration:run
+```
+
+Verificá que termine con `Migration ... has been executed successfully` para cada migración pendiente antes de continuar al Paso 2.
+
 ### Paso 2: Desplegar
 
 #### Opción A: Script Automatizado

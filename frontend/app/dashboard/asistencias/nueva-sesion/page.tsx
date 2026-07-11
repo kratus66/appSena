@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { api } from '@/lib/api';
@@ -11,6 +11,14 @@ import { Input } from '@/components/ui/input';
 import { ArrowLeft } from 'lucide-react';
 
 export default function NuevaSesionPage() {
+  return (
+    <Suspense fallback={null}>
+      <NuevaSesionForm />
+    </Suspense>
+  );
+}
+
+function NuevaSesionForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fichaIdParam = searchParams.get('fichaId');

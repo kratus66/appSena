@@ -5,7 +5,7 @@ import { Logger } from '@nestjs/common';
 
 async function bootstrap() {
   const logger = new Logger('Seeder');
-  
+
   try {
     const app = await NestFactory.createApplicationContext(AppModule);
     const seeder = app.get(SeederService);

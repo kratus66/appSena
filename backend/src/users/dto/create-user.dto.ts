@@ -1,4 +1,13 @@
-import { IsDateString, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DependenciaInstructor, EstadoDisponibilidad, UserRole } from '../entities/user.entity';
 
@@ -99,4 +108,13 @@ export class CreateUserDto {
   @IsOptional()
   @IsEnum(EstadoDisponibilidad)
   estadoDisponibilidad?: EstadoDisponibilidad;
+
+  @ApiPropertyOptional({
+    description:
+      'Colegio al que pertenece el usuario. Requerido para coordinador; determina qué datos puede ver. No aplica a admin/desarrollador.',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @IsOptional()
+  @IsUUID()
+  colegioId?: string;
 }

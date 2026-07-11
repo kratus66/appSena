@@ -1,12 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsNotEmpty,
-  IsEnum,
-  IsString,
-  IsOptional,
-  IsDateString,
-  MaxLength,
-} from 'class-validator';
+import { IsNotEmpty, IsEnum, IsString, IsOptional, IsDateString, MaxLength } from 'class-validator';
 import { ActionTipo } from '../entities/case-action.entity';
 
 export class CreateCaseActionDto {
@@ -17,8 +10,7 @@ export class CreateCaseActionDto {
   })
   @IsNotEmpty({ message: 'El tipo de acción es obligatorio' })
   @IsEnum(ActionTipo, {
-    message:
-      'El tipo debe ser uno de: LLAMADO_ATENCION, COMPROMISO, CITACION, OBSERVACION, CIERRE',
+    message: 'El tipo debe ser uno de: LLAMADO_ATENCION, COMPROMISO, CITACION, OBSERVACION, CIERRE',
   })
   tipo: ActionTipo;
 

@@ -1,40 +1,48 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import helmet from 'helmet';
+import * as cookieParser from 'cookie-parser';
+import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { join } from 'path';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 declare const module: any;
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
+
+  // Logging estructurado (JSON en producción) para toda la app, incluidos los
+  // logs internos de Nest (Logger.log/error/warn ya enrutan acá desde aquí).
+  app.useLogger(app.get(Logger));
+
+  // CSP desactivada: este proceso solo sirve JSON + la UI de Swagger (que
+  // necesita scripts/estilos inline); el frontend real es una app aparte
+  // con su propia política de cabeceras.
+  app.use(helmet({ contentSecurityPolicy: false }));
+  app.use(cookieParser());
 
   // CORS Configuration - Secure for production
   const frontendUrl = process.env.FRONTEND_URL;
   const nodeEnv = process.env.NODE_ENV;
-  
+
   if (nodeEnv === 'production' && frontendUrl) {
     app.enableCors({
       origin: [frontendUrl],
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
-      credentials: false,
+      credentials: true,
     });
   } else {
-    // Development mode - allow all origins explicitly
+    // Development mode - reflects the request origin (no wildcard, compatible with credentials)
     app.enableCors({
       origin: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
-      credentials: false,
+      credentials: true,
     });
   }
-
-  // Servir archivos estáticos desde la carpeta uploads
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads/',
-  });
 
   // Global validation pipe
   app.useGlobalPipes(
@@ -44,6 +52,9 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  // Filtro global de excepciones: nunca dejar pasar errores crudos al cliente
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Global prefix
   app.setGlobalPrefix('api');

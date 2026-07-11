@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Query,
-  UseGuards,
-  Req,
-  Res,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards, Req, Res, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -304,7 +295,8 @@ export class ReportesController {
   @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
   @ApiOperation({
     summary: 'Exportar alertas de ficha a CSV',
-    description: 'Descarga un archivo CSV con alertas de riesgo de la ficha en el mes especificado.',
+    description:
+      'Descarga un archivo CSV con alertas de riesgo de la ficha en el mes especificado.',
   })
   @ApiQuery({ name: 'month', required: true, type: String, description: 'Mes YYYY-MM' })
   @ApiResponse({

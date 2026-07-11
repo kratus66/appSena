@@ -1,20 +1,25 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Ambiente, EstadoAmbiente } from './entities/ambiente.entity';
-import { AsignacionAmbiente, DiaSemana, JornadaBloque } from './entities/asignacion-ambiente.entity';
+import { Ambiente } from './entities/ambiente.entity';
+import {
+  AsignacionAmbiente,
+  DiaSemana,
+  JornadaBloque,
+} from './entities/asignacion-ambiente.entity';
 import { CreateAmbienteDto } from './dto/create-ambiente.dto';
 import { UpdateAmbienteDto } from './dto/update-ambiente.dto';
 import { CreateAsignacionAmbienteDto } from './dto/create-asignacion-ambiente.dto';
 import { User } from '../users/entities/user.entity';
 
 const DIAS: DiaSemana[] = [
-  DiaSemana.LUN, DiaSemana.MAR, DiaSemana.MIE,
-  DiaSemana.JUE, DiaSemana.VIE, DiaSemana.SAB, DiaSemana.DOM,
+  DiaSemana.LUN,
+  DiaSemana.MAR,
+  DiaSemana.MIE,
+  DiaSemana.JUE,
+  DiaSemana.VIE,
+  DiaSemana.SAB,
+  DiaSemana.DOM,
 ];
 const JORNADAS: JornadaBloque[] = [JornadaBloque.MANANA, JornadaBloque.TARDE, JornadaBloque.NOCHE];
 
@@ -30,7 +35,10 @@ export class AmbientesService {
   // ── CRUD Ambientes ──────────────────────────────────────────────────────
 
   async findAll(query: { sede?: string; tipo?: string; estado?: string }) {
-    const qb = this.ambienteRepo.createQueryBuilder('a').withDeleted().where('a.deleted_at IS NULL');
+    const qb = this.ambienteRepo
+      .createQueryBuilder('a')
+      .withDeleted()
+      .where('a.deleted_at IS NULL');
 
     if (query.sede) qb.andWhere('a.sede = :sede', { sede: query.sede });
     if (query.tipo) qb.andWhere('a.tipo = :tipo', { tipo: query.tipo });

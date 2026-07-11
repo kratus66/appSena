@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useParams, useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card } from '@/components/ui/card';
@@ -295,13 +296,13 @@ function JustifyModal({
     ];
     
     if (!allowedTypes.includes(file.type)) {
-      alert('Tipo de archivo no permitido. Use PDF, imágenes (JPG, PNG, WEBP) o documentos Word.');
+      toast.error('Tipo de archivo no permitido. Use PDF, imágenes (JPG, PNG, WEBP) o documentos Word.');
       return;
     }
 
     // Validar tamaño (5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('El archivo no debe superar 5MB');
+      toast.error('El archivo no debe superar 5MB');
       return;
     }
 
@@ -328,10 +329,10 @@ function JustifyModal({
 
       setUploadProgress(100);
       setEvidenciaUrl(response.data.url);
-      alert('Archivo subido correctamente');
+      toast.success('Archivo subido correctamente');
     } catch (error: any) {
       console.error('Error uploading file:', error);
-      alert(error.response?.data?.message || 'Error al subir el archivo');
+      toast.error(error.response?.data?.message || 'Error al subir el archivo');
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -347,7 +348,7 @@ function JustifyModal({
     e.preventDefault();
     
     if (!motivo.trim()) {
-      alert('El motivo es obligatorio');
+      toast.error('El motivo es obligatorio');
       return;
     }
 
@@ -358,11 +359,11 @@ function JustifyModal({
         motivoJustificacion: motivo,
         evidenciaUrl: evidenciaUrl.trim() || undefined,
       });
-      alert('Asistencia justificada correctamente');
+      toast.success('Asistencia justificada correctamente');
       onSuccess();
     } catch (error: any) {
       console.error('Error justifying:', error);
-      alert(error.response?.data?.message || 'Error al justificar asistencia');
+      toast.error(error.response?.data?.message || 'Error al justificar asistencia');
     } finally {
       setLoading(false);
     }
@@ -377,7 +378,7 @@ function JustifyModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-4 text-gray-900">Justificar Ausencia</h2>
         <p className="text-gray-900 mb-4">

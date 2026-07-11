@@ -103,7 +103,11 @@ export class PtcController {
   @Roles(UserRole.COORDINADOR, UserRole.ADMIN)
   @ApiOperation({ summary: 'Cambiar estado del acta (solo COORDINADOR/ADMIN)' })
   @ApiResponse({ status: 200, description: 'Estado del acta actualizado' })
-  updateActaEstado(@Param('id') id: string, @Body() updateEstadoDto: UpdateActaEstadoDto, @Request() req) {
+  updateActaEstado(
+    @Param('id') id: string,
+    @Body() updateEstadoDto: UpdateActaEstadoDto,
+    @Request() req,
+  ) {
     return this.ptcService.updateActaEstado(id, updateEstadoDto, req.user);
   }
 
@@ -137,7 +141,11 @@ export class PtcController {
   @Roles(UserRole.COORDINADOR, UserRole.ADMIN)
   @ApiOperation({ summary: 'Cambiar estado del PTC (solo COORDINADOR/ADMIN)' })
   @ApiResponse({ status: 200, description: 'Estado actualizado' })
-  updatePtcEstado(@Param('id') id: string, @Body() updateEstadoDto: UpdatePtcEstadoDto, @Request() req) {
+  updatePtcEstado(
+    @Param('id') id: string,
+    @Body() updateEstadoDto: UpdatePtcEstadoDto,
+    @Request() req,
+  ) {
     return this.ptcService.updatePtcEstado(id, updateEstadoDto, req.user);
   }
 
@@ -163,7 +171,11 @@ export class PtcController {
   @Roles(UserRole.INSTRUCTOR, UserRole.COORDINADOR, UserRole.ADMIN)
   @ApiOperation({ summary: 'Agregar compromiso/item al PTC' })
   @ApiResponse({ status: 201, description: 'Item agregado exitosamente' })
-  addItemToPtc(@Param('ptcId') ptcId: string, @Body() createItemDto: CreatePtcItemDto, @Request() req) {
+  addItemToPtc(
+    @Param('ptcId') ptcId: string,
+    @Body() createItemDto: CreatePtcItemDto,
+    @Request() req,
+  ) {
     return this.ptcService.addItemToPtc(ptcId, createItemDto, req.user);
   }
 
@@ -207,7 +219,11 @@ export class PtcController {
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: 'PDF subido exitosamente' })
   @UseInterceptors(FileInterceptor('file'))
-  uploadActaPdf(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @Request() req) {
+  uploadActaPdf(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req,
+  ) {
     return this.ptcService.uploadActaPdf(id, file, req.user);
   }
 }

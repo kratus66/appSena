@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CalendarEvent, EventType, EventStatus, EventPriority } from '../agenda/entities/calendar-event.entity';
+import {
+  CalendarEvent,
+  EventType,
+  EventStatus,
+  EventPriority,
+} from '../agenda/entities/calendar-event.entity';
 import { Reminder, ReminderChannel, ReminderStatus } from '../agenda/entities/reminder.entity';
 import { User, UserRole } from '../users/entities/user.entity';
 import { Ficha } from '../fichas/entities/ficha.entity';
@@ -49,8 +54,8 @@ export class AgendaSeeder {
     });
 
     // Limpiar datos anteriores
-    await this.reminderRepository.delete({});
-    await this.eventRepository.delete({});
+    await this.reminderRepository.createQueryBuilder().delete().execute();
+    await this.eventRepository.createQueryBuilder().delete().execute();
 
     // Crear eventos de prueba
     const now = new Date();

@@ -3,11 +3,15 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
-  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { DisciplinaryCase, CaseEstado, CaseTipo, CaseGravedad } from './entities/disciplinary-case.entity';
+import {
+  DisciplinaryCase,
+  CaseEstado,
+  CaseTipo,
+  CaseGravedad,
+} from './entities/disciplinary-case.entity';
 import { CaseAction, ActionTipo } from './entities/case-action.entity';
 import { CreateCaseDto } from './dto/create-case.dto';
 import { UpdateCaseDto } from './dto/update-case.dto';
@@ -19,6 +23,7 @@ import { CreateCaseFromAlertDto } from './dto/create-case-from-alert.dto';
 import { User, UserRole } from '../users/entities/user.entity';
 import { Ficha } from '../fichas/entities/ficha.entity';
 import { Aprendiz } from '../aprendices/entities/aprendiz.entity';
+import { canAccessFicha, applyFichaScope } from '../common/utils/ficha-access.util';
 
 @Injectable()
 export class DisciplinarioService {
@@ -52,16 +57,12 @@ export class DisciplinarioService {
       throw new NotFoundException(`No se encontró el aprendiz con ID ${aprendizId}`);
     }
     if (aprendiz.fichaId !== fichaId) {
-      throw new BadRequestException(
-        'El aprendiz no pertenece a la ficha especificada',
-      );
+      throw new BadRequestException('El aprendiz no pertenece a la ficha especificada');
     }
 
-    // Validar permisos: INSTRUCTOR solo puede crear para sus fichas
-    if (user.rol === UserRole.INSTRUCTOR && ficha.instructorId !== user.id) {
-      throw new ForbiddenException(
-        'Solo puedes crear casos para aprendices de tus fichas',
-      );
+    // Validar permisos: instructor solo en sus fichas, coordinador solo en su colegio
+    if (!canAccessFicha(user, ficha)) {
+      throw new ForbiddenException('Solo puedes crear casos para aprendices de tus fichas');
     }
 
     // Validar que fechaIncidente no sea futura
@@ -110,10 +111,7 @@ export class DisciplinarioService {
       .leftJoinAndSelect('case.assignedTo', 'assignedTo')
       .where('case.deletedAt IS NULL');
 
-    // Restricción por rol
-    if (user.rol === UserRole.INSTRUCTOR) {
-      qb.andWhere('ficha.instructorId = :userId', { userId: user.id });
-    }
+    applyFichaScope(qb, user, 'ficha');
 
     // Filtros
     if (fichaId) {
@@ -190,8 +188,8 @@ export class DisciplinarioService {
       throw new NotFoundException(`No se encontró el caso con ID ${id}`);
     }
 
-    // Validar permisos
-    if (user.rol === UserRole.INSTRUCTOR && caso.ficha.instructorId !== user.id) {
+    // Validar permisos: instructor solo en sus fichas, coordinador solo en su colegio
+    if (!canAccessFicha(user, caso.ficha)) {
       throw new ForbiddenException('No tienes permisos para ver este caso');
     }
 
@@ -206,10 +204,7 @@ export class DisciplinarioService {
       throw new BadRequestException('No se puede editar un caso cerrado');
     }
 
-    // Validar permisos: INSTRUCTOR solo si es su ficha
-    if (user.rol === UserRole.INSTRUCTOR && caso.ficha.instructorId !== user.id) {
-      throw new ForbiddenException('No tienes permisos para editar este caso');
-    }
+    // findOne ya validó el acceso al caso
 
     // Si se cambia fichaId o aprendizId, validar
     if (updateCaseDto.fichaId || updateCaseDto.aprendizId) {
@@ -223,9 +218,7 @@ export class DisciplinarioService {
         throw new NotFoundException(`No se encontró el aprendiz con ID ${aprendizId}`);
       }
       if (aprendiz.fichaId !== fichaId) {
-        throw new BadRequestException(
-          'El aprendiz no pertenece a la ficha especificada',
-        );
+        throw new BadRequestException('El aprendiz no pertenece a la ficha especificada');
       }
     }
 
@@ -259,16 +252,12 @@ export class DisciplinarioService {
     // Si se cierra, validar cierreResumen
     if (estado === CaseEstado.CERRADO) {
       if (!cierreResumen) {
-        throw new BadRequestException(
-          'El resumen de cierre es obligatorio al cerrar un caso',
-        );
+        throw new BadRequestException('El resumen de cierre es obligatorio al cerrar un caso');
       }
 
       // Solo COORDINADOR/ADMIN pueden cerrar (regla de negocio)
       if (user.rol === UserRole.INSTRUCTOR) {
-        throw new ForbiddenException(
-          'Solo coordinadores y administradores pueden cerrar casos',
-        );
+        throw new ForbiddenException('Solo coordinadores y administradores pueden cerrar casos');
       }
 
       // Crear acción automática de cierre
@@ -321,10 +310,7 @@ export class DisciplinarioService {
       throw new BadRequestException('No se pueden agregar acciones a un caso cerrado');
     }
 
-    // Validar permisos
-    if (user.rol === UserRole.INSTRUCTOR && caso.ficha.instructorId !== user.id) {
-      throw new ForbiddenException('No tienes permisos para agregar acciones a este caso');
-    }
+    // findOne ya validó el acceso al caso
 
     const accion = this.actionRepository.create({
       ...createActionDto,
@@ -366,10 +352,7 @@ export class DisciplinarioService {
       throw new BadRequestException('No se pueden editar acciones de un caso cerrado');
     }
 
-    // Validar permisos
-    if (user.rol === UserRole.INSTRUCTOR && caso.ficha.instructorId !== user.id) {
-      throw new ForbiddenException('No tienes permisos para editar esta acción');
-    }
+    // findOne ya validó el acceso al caso
 
     Object.assign(accion, updateActionDto);
     return this.actionRepository.save(accion);
@@ -381,8 +364,7 @@ export class DisciplinarioService {
     createFromAlertDto: CreateCaseFromAlertDto,
     user: User,
   ): Promise<DisciplinaryCase> {
-    const { fichaId, aprendizId, criterioAlerta, gravedad, descripcionAuto } =
-      createFromAlertDto;
+    const { fichaId, aprendizId, criterioAlerta, gravedad, descripcionAuto } = createFromAlertDto;
 
     // Validar que la ficha existe
     const ficha = await this.fichaRepository.findOne({ where: { id: fichaId } });
@@ -398,16 +380,12 @@ export class DisciplinarioService {
       throw new NotFoundException(`No se encontró el aprendiz con ID ${aprendizId}`);
     }
     if (aprendiz.fichaId !== fichaId) {
-      throw new BadRequestException(
-        'El aprendiz no pertenece a la ficha especificada',
-      );
+      throw new BadRequestException('El aprendiz no pertenece a la ficha especificada');
     }
 
-    // Validar permisos: INSTRUCTOR solo para sus fichas
-    if (user.rol === UserRole.INSTRUCTOR && ficha.instructorId !== user.id) {
-      throw new ForbiddenException(
-        'Solo puedes crear casos para aprendices de tus fichas',
-      );
+    // Validar permisos: instructor solo en sus fichas, coordinador solo en su colegio
+    if (!canAccessFicha(user, ficha)) {
+      throw new ForbiddenException('Solo puedes crear casos para aprendices de tus fichas');
     }
 
     // Construir asunto y descripción
@@ -424,9 +402,7 @@ export class DisciplinarioService {
       tipo: CaseTipo.ASISTENCIA,
       gravedad: gravedad || CaseGravedad.MEDIA,
       asunto: asuntoMap[criterioAlerta],
-      descripcion: descripcionAuto
-        ? `${descripcionBase} ${descripcionAuto}`
-        : descripcionBase,
+      descripcion: descripcionAuto ? `${descripcionBase} ${descripcionAuto}` : descripcionBase,
       fechaIncidente: new Date(),
       estado: CaseEstado.ABIERTO,
       createdById: user.id,

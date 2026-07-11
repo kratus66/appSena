@@ -1,12 +1,4 @@
-import {
-  IsNotEmpty,
-  IsEnum,
-  IsOptional,
-  IsString,
-  IsArray,
-  IsInt,
-  IsUUID,
-} from 'class-validator';
+import { IsNotEmpty, IsEnum, IsOptional, IsString, IsArray, IsInt, IsUUID } from 'class-validator';
 import {
   DependenciaPlaneacion,
   EstadoPlaneacion,

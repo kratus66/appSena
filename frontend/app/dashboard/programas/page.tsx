@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { SkeletonCards } from '@/components/ui/skeleton';
+import toast from 'react-hot-toast';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -98,7 +100,7 @@ export default function ProgramasPage() {
     try {
       setIsSaving(true);
       await api.patch(`/programas/${selectedPrograma.id}`, editFormData);
-      alert('✅ Programa actualizado exitosamente');
+      toast.success('Programa actualizado exitosamente');
       setIsEditModalOpen(false);
       setSelectedPrograma(null);
       fetchProgramas();
@@ -106,9 +108,9 @@ export default function ProgramasPage() {
       console.error('Error updating programa:', error);
       const mensaje = error.response?.data?.message;
       if (Array.isArray(mensaje)) {
-        alert('❌ Error: ' + mensaje.join(', '));
+        toast.error(mensaje.join(', '));
       } else {
-        alert('❌ Error: ' + (mensaje || 'Error al actualizar el programa'));
+        toast.error((mensaje || 'Error al actualizar el programa'));
       }
     } finally {
       setIsSaving(false);
@@ -119,7 +121,7 @@ export default function ProgramasPage() {
     try {
       setIsSaving(true);
       await api.post('/programas', createFormData);
-      alert('✅ Programa creado exitosamente');
+      toast.success('Programa creado exitosamente');
       setIsCreateModalOpen(false);
       setCreateFormData({
         nombre: '',
@@ -136,9 +138,9 @@ export default function ProgramasPage() {
       console.error('Error creating programa:', error);
       const mensaje = error.response?.data?.message;
       if (Array.isArray(mensaje)) {
-        alert('❌ Error: ' + mensaje.join(', '));
+        toast.error(mensaje.join(', '));
       } else {
-        alert('❌ Error: ' + (mensaje || 'Error al crear el programa'));
+        toast.error((mensaje || 'Error al crear el programa'));
       }
     } finally {
       setIsSaving(false);
@@ -292,9 +294,7 @@ export default function ProgramasPage() {
 
         {/* Programas Grid */}
         {loading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">Cargando programas...</p>
-          </div>
+          <SkeletonCards count={6} />
         ) : filteredProgramas.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500">
@@ -353,7 +353,7 @@ export default function ProgramasPage() {
 
         {/* View Modal */}
         {isViewModalOpen && selectedPrograma && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -420,7 +420,7 @@ export default function ProgramasPage() {
 
         {/* Edit Modal */}
         {isEditModalOpen && selectedPrograma && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
             <Card className="w-full max-w-3xl my-8 bg-white max-h-[90vh] overflow-y-auto">
               <CardHeader className="border-b border-gray-200">
                 <div className="flex items-center justify-between">
@@ -489,7 +489,7 @@ export default function ProgramasPage() {
 
         {/* Create Modal */}
         {isCreateModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
             <Card className="w-full max-w-3xl my-8 bg-white max-h-[90vh] overflow-y-auto">
               <CardHeader className="border-b border-gray-200">
                 <div className="flex items-center justify-between">

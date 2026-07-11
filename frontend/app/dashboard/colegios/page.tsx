@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { SkeletonCards } from '@/components/ui/skeleton';
+import toast from 'react-hot-toast';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -99,7 +101,7 @@ export default function ColegiosPage() {
     try {
       setIsSaving(true);
       await api.patch(`/colegios/${selectedColegio.id}`, editFormData);
-      alert('✅ Colegio actualizado exitosamente');
+      toast.success('Colegio actualizado exitosamente');
       setIsEditModalOpen(false);
       setSelectedColegio(null);
       fetchColegios();
@@ -107,9 +109,9 @@ export default function ColegiosPage() {
       console.error('Error updating colegio:', error);
       const mensaje = error.response?.data?.message;
       if (Array.isArray(mensaje)) {
-        alert('❌ Error: ' + mensaje.join(', '));
+        toast.error(mensaje.join(', '));
       } else {
-        alert('❌ Error: ' + (mensaje || 'Error al actualizar el colegio'));
+        toast.error((mensaje || 'Error al actualizar el colegio'));
       }
     } finally {
       setIsSaving(false);
@@ -120,7 +122,7 @@ export default function ColegiosPage() {
     try {
       setIsSaving(true);
       await api.post('/colegios', createFormData);
-      alert('✅ Colegio creado exitosamente');
+      toast.success('Colegio creado exitosamente');
       setIsCreateModalOpen(false);
       setCreateFormData({
         nombre: '',
@@ -137,9 +139,9 @@ export default function ColegiosPage() {
       console.error('Error creating colegio:', error);
       const mensaje = error.response?.data?.message;
       if (Array.isArray(mensaje)) {
-        alert('❌ Error: ' + mensaje.join(', '));
+        toast.error(mensaje.join(', '));
       } else {
-        alert('❌ Error: ' + (mensaje || 'Error al crear el colegio'));
+        toast.error((mensaje || 'Error al crear el colegio'));
       }
     } finally {
       setIsSaving(false);
@@ -151,7 +153,7 @@ export default function ColegiosPage() {
     try {
       setIsSaving(true);
       await api.delete(`/colegios/${selectedColegio.id}`);
-      alert('✅ Colegio eliminado exitosamente');
+      toast.success('Colegio eliminado exitosamente');
       setIsDeleteModalOpen(false);
       setSelectedColegio(null);
       fetchColegios();
@@ -159,9 +161,9 @@ export default function ColegiosPage() {
       console.error('Error deleting colegio:', error);
       const mensaje = error.response?.data?.message;
       if (Array.isArray(mensaje)) {
-        alert('❌ Error: ' + mensaje.join(', '));
+        toast.error(mensaje.join(', '));
       } else {
-        alert('❌ Error: ' + (mensaje || 'Error al eliminar el colegio'));
+        toast.error((mensaje || 'Error al eliminar el colegio'));
       }
     } finally {
       setIsSaving(false);
@@ -289,8 +291,8 @@ export default function ColegiosPage() {
         {/* Colegios Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {loading ? (
-            <div className="col-span-full text-center py-8 text-gray-500">
-              Cargando...
+            <div className="col-span-full">
+              <SkeletonCards count={6} />
             </div>
           ) : filteredColegios.length === 0 ? (
             <div className="col-span-full text-center py-8 text-gray-500">
@@ -359,7 +361,7 @@ export default function ColegiosPage() {
 
         {/* View Modal */}
         {isViewModalOpen && selectedColegio && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <Card className="w-full max-w-2xl">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -423,7 +425,7 @@ export default function ColegiosPage() {
 
         {/* Edit Modal */}
         {isEditModalOpen && selectedColegio && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
             <Card className="w-full max-w-2xl my-8 bg-white">
               <CardHeader className="border-b border-gray-200">
                 <div className="flex items-center justify-between">
@@ -488,7 +490,7 @@ export default function ColegiosPage() {
 
         {/* Create Modal */}
         {isCreateModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
             <Card className="w-full max-w-2xl my-8 bg-white">
               <CardHeader className="border-b border-gray-200">
                 <div className="flex items-center justify-between">

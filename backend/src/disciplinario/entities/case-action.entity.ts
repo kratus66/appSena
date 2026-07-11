@@ -2,7 +2,6 @@ import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { DisciplinaryCase } from './disciplinary-case.entity';
-import { User } from '../../users/entities/user.entity';
 
 export enum ActionTipo {
   LLAMADO_ATENCION = 'LLAMADO_ATENCION',

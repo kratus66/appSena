@@ -126,7 +126,10 @@ export class AgendaController {
     description:
       'Este endpoint marca un recordatorio como enviado y crea la notificación correspondiente. En producción, esto lo haría un worker/cron automáticamente.',
   })
-  @ApiResponse({ status: 200, description: 'Recordatorio marcado como enviado y notificación creada' })
+  @ApiResponse({
+    status: 200,
+    description: 'Recordatorio marcado como enviado y notificación creada',
+  })
   markReminderAsSent(@Param('id') id: string, @Request() req) {
     return this.agendaService.markReminderAsSent(id, req.user);
   }

@@ -16,7 +16,8 @@ import { QuerySesionesDto } from './dto/query-sesiones.dto';
 import { RegistrarAsistenciaDto } from './dto/registrar-asistencia.dto';
 import { JustificarAsistenciaDto } from './dto/justificar-asistencia.dto';
 import { QueryAlertasDto } from './dto/query-alertas.dto';
-import { UserRole } from '../users/entities/user.entity';
+import { User } from '../users/entities/user.entity';
+import { canAccessFicha, applyFichaScope } from '../common/utils/ficha-access.util';
 
 @Injectable()
 export class AsistenciasService {
@@ -33,11 +34,7 @@ export class AsistenciasService {
 
   // ==================== SESIONES ====================
 
-  async createSesion(
-    createSesionDto: CreateSesionDto,
-    userId: string,
-    userRole: UserRole,
-  ): Promise<ClaseSesion> {
+  async createSesion(createSesionDto: CreateSesionDto, user: User): Promise<ClaseSesion> {
     const { fichaId, fecha, tema, observaciones } = createSesionDto;
 
     // Verificar que la ficha existe
@@ -50,8 +47,8 @@ export class AsistenciasService {
       throw new NotFoundException(`Ficha con ID ${fichaId} no encontrada`);
     }
 
-    // Validar permisos: instructor solo puede crear sesiones para sus fichas
-    if (userRole === UserRole.INSTRUCTOR && ficha.instructorId !== userId) {
+    // Validar permisos: instructor solo en sus fichas, coordinador solo en su colegio
+    if (!canAccessFicha(user, ficha)) {
       throw new ForbiddenException('No tienes permisos para crear sesiones en esta ficha');
     }
 
@@ -75,7 +72,7 @@ export class AsistenciasService {
       fecha: fechaDate,
       tema,
       observaciones,
-      createdByUserId: userId,
+      createdByUserId: user.id,
     });
 
     const savedSesion = await this.sesionRepository.save(sesion);
@@ -104,8 +101,7 @@ export class AsistenciasService {
 
   async findAllSesiones(
     querySesionesDto: QuerySesionesDto,
-    userId: string,
-    userRole: UserRole,
+    user: User,
   ): Promise<{ data: ClaseSesion[]; total: number; page: number; limit: number }> {
     const { fichaId, desde, hasta, page = 1, limit = 10 } = querySesionesDto;
 
@@ -121,10 +117,7 @@ export class AsistenciasService {
       queryBuilder.andWhere('sesion.fichaId = :fichaId', { fichaId });
     }
 
-    // Si es instructor, solo puede ver sesiones de sus fichas
-    if (userRole === UserRole.INSTRUCTOR) {
-      queryBuilder.andWhere('ficha.instructorId = :userId', { userId });
-    }
+    applyFichaScope(queryBuilder, user, 'ficha');
 
     // Filtrar por rango de fechas
     if (desde) {
@@ -147,29 +140,36 @@ export class AsistenciasService {
     return { data, total, page, limit };
   }
 
-  async findOneSesion(id: string, userId: string, userRole: UserRole): Promise<ClaseSesion> {
+  async findOneSesion(id: string, user: User): Promise<ClaseSesion> {
     const sesion = await this.sesionRepository.findOne({
       where: { id },
-      relations: ['ficha', 'ficha.programa', 'ficha.colegio', 'ficha.instructor', 'asistencias', 'asistencias.aprendiz'],
+      relations: [
+        'ficha',
+        'ficha.programa',
+        'ficha.colegio',
+        'ficha.instructor',
+        'asistencias',
+        'asistencias.aprendiz',
+      ],
     });
 
     if (!sesion) {
       throw new NotFoundException(`Sesión con ID ${id} no encontrada`);
     }
 
-    // Si es instructor, validar que sea su ficha
-    if (userRole === UserRole.INSTRUCTOR && sesion.ficha.instructorId !== userId) {
+    if (!canAccessFicha(user, sesion.ficha)) {
       throw new ForbiddenException('No tienes permisos para ver esta sesión');
     }
 
     // Obtener resumen de asistencias
     const totalAprendices = sesion.asistencias?.length || 0;
 
-    const presentes = sesion.asistencias?.filter(a => a.presente).length || 0;
+    const presentes = sesion.asistencias?.filter((a) => a.presente).length || 0;
 
     const ausentes = totalAprendices - presentes;
-    
-    const justificadas = sesion.asistencias?.filter(a => !a.presente && a.justificada).length || 0;
+
+    const justificadas =
+      sesion.asistencias?.filter((a) => !a.presente && a.justificada).length || 0;
 
     return {
       ...sesion,
@@ -187,8 +187,7 @@ export class AsistenciasService {
   async registrarAsistencias(
     sesionId: string,
     registrarAsistenciaDto: RegistrarAsistenciaDto,
-    userId: string,
-    userRole: UserRole,
+    user: User,
   ): Promise<{ message: string; registradas: number }> {
     const { asistencias } = registrarAsistenciaDto;
 
@@ -202,8 +201,7 @@ export class AsistenciasService {
       throw new NotFoundException(`Sesión con ID ${sesionId} no encontrada`);
     }
 
-    // Validar permisos
-    if (userRole === UserRole.INSTRUCTOR && sesion.ficha.instructorId !== userId) {
+    if (!canAccessFicha(user, sesion.ficha)) {
       throw new ForbiddenException('No tienes permisos para registrar asistencias en esta sesión');
     }
 
@@ -265,8 +263,7 @@ export class AsistenciasService {
   async justificarAsistencia(
     asistenciaId: string,
     justificarDto: JustificarAsistenciaDto,
-    userId: string,
-    userRole: UserRole,
+    user: User,
   ): Promise<Asistencia> {
     const { justificada, motivoJustificacion, evidenciaUrl } = justificarDto;
 
@@ -280,19 +277,22 @@ export class AsistenciasService {
       throw new NotFoundException(`Asistencia con ID ${asistenciaId} no encontrada`);
     }
 
-    // Validar permisos
-    if (userRole === UserRole.INSTRUCTOR && asistencia.sesion.ficha.instructorId !== userId) {
+    if (!canAccessFicha(user, asistencia.sesion.ficha)) {
       throw new ForbiddenException('No tienes permisos para justificar esta asistencia');
     }
 
     // Solo se puede justificar si el aprendiz NO estuvo presente
     if (asistencia.presente) {
-      throw new BadRequestException('No se puede justificar una asistencia si el aprendiz estuvo presente');
+      throw new BadRequestException(
+        'No se puede justificar una asistencia si el aprendiz estuvo presente',
+      );
     }
 
     // Si justificada=true, validar que haya motivo
     if (justificada && !motivoJustificacion) {
-      throw new BadRequestException('El motivo de justificación es obligatorio cuando justificada es true');
+      throw new BadRequestException(
+        'El motivo de justificación es obligatorio cuando justificada es true',
+      );
     }
 
     // Actualizar
@@ -308,8 +308,7 @@ export class AsistenciasService {
   async getAlertasFicha(
     fichaId: string,
     queryAlertasDto: QueryAlertasDto,
-    userId: string,
-    userRole: UserRole,
+    user: User,
   ): Promise<any> {
     // Verificar que la ficha existe
     const ficha = await this.fichaRepository.findOne({
@@ -321,8 +320,7 @@ export class AsistenciasService {
       throw new NotFoundException(`Ficha con ID ${fichaId} no encontrada`);
     }
 
-    // Validar permisos
-    if (userRole === UserRole.INSTRUCTOR && ficha.instructorId !== userId) {
+    if (!canAccessFicha(user, ficha)) {
       throw new ForbiddenException('No tienes permisos para ver alertas de esta ficha');
     }
 
@@ -420,7 +418,8 @@ export class AsistenciasService {
     return {
       fichaId,
       numeroFicha: ficha.numeroFicha,
-      mes: month || `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`,
+      mes:
+        month || `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`,
       alertas,
     };
   }
@@ -431,8 +430,7 @@ export class AsistenciasService {
     fichaId: string,
     desde?: string,
     hasta?: string,
-    userId?: string,
-    userRole?: UserRole,
+    user?: User,
   ): Promise<any> {
     // Verificar que la ficha existe
     const ficha = await this.fichaRepository.findOne({
@@ -444,8 +442,7 @@ export class AsistenciasService {
       throw new NotFoundException(`Ficha con ID ${fichaId} no encontrada`);
     }
 
-    // Validar permisos si se proporciona userId
-    if (userId && userRole === UserRole.INSTRUCTOR && ficha.instructorId !== userId) {
+    if (!canAccessFicha(user, ficha)) {
       throw new ForbiddenException('No tienes permisos para ver el resumen de esta ficha');
     }
 
